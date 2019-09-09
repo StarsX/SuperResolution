@@ -1,0 +1,229 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="Source Files">
+      <UniqueIdentifier>{4FC737F1-C7A5-4376-A066-2A32D752A2FF}</UniqueIdentifier>
+      <Extensions>cpp;c;cc;cxx;def;odl;idl;hpj;bat;asm;asmx</Extensions>
+    </Filter>
+    <Filter Include="Header Files">
+      <UniqueIdentifier>{93995380-89BD-4b04-88EB-625FBE52EBFB}</UniqueIdentifier>
+      <Extensions>h;hh;hpp;hxx;hm;inl;inc;ipp;xsd</Extensions>
+    </Filter>
+    <Filter Include="Resource Files">
+      <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
+      <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
+    </Filter>
+    <Filter Include="Common">
+      <UniqueIdentifier>{9be3f9a7-78d0-46f0-a78f-d8c23f5ef22f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG">
+      <UniqueIdentifier>{dc0911ef-80ae-47ff-9177-393fa5cc0248}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Header Files">
+      <UniqueIdentifier>{08d2374e-f36c-4fd7-9792-882e21b13090}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Common\Source Files">
+      <UniqueIdentifier>{8612a9fa-d93e-4759-a14e-067144cfb445}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\Core">
+      <UniqueIdentifier>{fce9b0a2-0f96-4729-94ea-acaa2ddf3967}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\Core\Source Files">
+      <UniqueIdentifier>{15e809e8-faaa-46ca-9526-dd312567b299}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\Core\Source Files\Inc">
+      <UniqueIdentifier>{4311ab07-2705-470d-b98c-b107e75c0a6f}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\Core\Header Files">
+      <UniqueIdentifier>{ae9800bd-1752-4d72-b23d-76db5b5dc603}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\MachineLearning">
+      <UniqueIdentifier>{a6b02b24-23a2-4876-9f58-f39159e11280}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\MachineLearning\Source Files">
+      <UniqueIdentifier>{8a55cc28-b4cc-4c4f-9dbc-e0b3c6e674b9}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\MachineLearning\Header Files">
+      <UniqueIdentifier>{9aec5b19-d8a4-49b5-aae3-861e448727f0}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Shaders">
+      <UniqueIdentifier>{0c90fa8b-4f2a-4dae-960c-a7f0087de171}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\Advanced">
+      <UniqueIdentifier>{6345d945-b140-4fec-ae3f-2ac000d1756d}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\Advanced\Header Files">
+      <UniqueIdentifier>{f138e0e6-4427-4bf6-9cdc-23c641b33027}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="XUSG\Advanced\Source Files">
+      <UniqueIdentifier>{aebfc260-d01a-415f-b5cf-6e714118a09c}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="XUSG\Core\XUSG.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSGCommand.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSGComputeState.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSGDescriptor.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSGGraphicsState.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSGInputLayout.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSGPipelineLayout.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSGReflector.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSGResource.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSGShader.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Core\XUSGType.h">
+      <Filter>XUSG\Core\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\d3dx12.h">
+      <Filter>Common\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\dxcapi.h">
+      <Filter>Common\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\DXFramework.h">
+      <Filter>Common\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\DXFrameworkHelper.h">
+      <Filter>Common\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\StepTimer.h">
+      <Filter>Common\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Win32Application.h">
+      <Filter>Common\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\MachineLearning\XUSGMachineLearning.h">
+      <Filter>XUSG\MachineLearning\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\MachineLearning\XUSGMachineLearningType.h">
+      <Filter>XUSG\MachineLearning\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="SuperResolutionX.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Content\SuperResolution.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\MachineLearning\XUSGMachineLearningUtil.h">
+      <Filter>XUSG\MachineLearning\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\Float16Compressor.h">
+      <Filter>Common\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Content\LoadWeights.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="XUSG\Advanced\XUSGDDSLoader.h">
+      <Filter>XUSG\Advanced\Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="Common\dds.h">
+      <Filter>Common\Header Files</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="XUSG\Core\XUSGCommand.cpp">
+      <Filter>XUSG\Core\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\Core\XUSGComputeState.cpp">
+      <Filter>XUSG\Core\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\Core\XUSGDescriptor.cpp">
+      <Filter>XUSG\Core\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\Core\XUSGGraphicsState.cpp">
+      <Filter>XUSG\Core\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\Core\XUSGInputLayout.cpp">
+      <Filter>XUSG\Core\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\Core\XUSGPipelineLayout.cpp">
+      <Filter>XUSG\Core\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\Core\XUSGReflector.cpp">
+      <Filter>XUSG\Core\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\Core\XUSGResource.cpp">
+      <Filter>XUSG\Core\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\Core\XUSGShader.cpp">
+      <Filter>XUSG\Core\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="stdafx.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\DXFramework.cpp">
+      <Filter>Common\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Common\Win32Application.cpp">
+      <Filter>Common\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Main.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\MachineLearning\XUSGMachineLearning.cpp">
+      <Filter>XUSG\MachineLearning\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="SuperResolutionX.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Content\SuperResolution.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\MachineLearning\XUSGMachineLearningUtil.cpp">
+      <Filter>XUSG\MachineLearning\Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="Content\LoadWeights.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="XUSG\Advanced\XUSGDDSLoader.cpp">
+      <Filter>XUSG\Advanced\Source Files</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="XUSG\Core\XUSGBlend.inl">
+      <Filter>XUSG\Core\Source Files\Inc</Filter>
+    </None>
+    <None Include="XUSG\Core\XUSGDepthStencil.inl">
+      <Filter>XUSG\Core\Source Files\Inc</Filter>
+    </None>
+    <None Include="XUSG\Core\XUSGRasterizer.inl">
+      <Filter>XUSG\Core\Source Files\Inc</Filter>
+    </None>
+    <None Include="XUSG\Core\XUSGSampler.inl">
+      <Filter>XUSG\Core\Source Files\Inc</Filter>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <FxCompile Include="Content\Shaders\CSImageToTensor.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\VSTensorToImage.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+    <FxCompile Include="Content\Shaders\PSTensorToImage.hlsl">
+      <Filter>Shaders</Filter>
+    </FxCompile>
+  </ItemGroup>
+</Project>
