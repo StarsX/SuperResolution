@@ -21,7 +21,6 @@ SuperResolution::SuperResolution(const XUSG::Device& device, const ML::Device& m
 	m_graphicsPipelineCache.SetDevice(m_device);
 	m_computePipelineCache.SetDevice(m_device);
 	m_descriptorTableCache.SetDevice(device);
-	m_mlDescriptorTableCache.SetDevice(device);
 }
 
 SuperResolution::~SuperResolution()
@@ -60,7 +59,7 @@ bool SuperResolution::Init(CommandList& commandList, const CommandRecorder& comm
 
 void SuperResolution::ImageToTensors(const CommandList& commandList)
 {
-	const DescriptorPool descriptorPools[] = { m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL) };
+	const DescriptorPool descriptorPools[] = { m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL, GRAPHICS_POOL) };
 	commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
 
 	ResourceBarrier barrier;
@@ -79,7 +78,7 @@ void SuperResolution::ImageToTensors(const CommandList& commandList)
 
 void SuperResolution::Process(CommandList& commandList, const CommandRecorder& commandRecorder)
 {
-	const DescriptorPool descriptorPools[] = { m_mlDescriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL) };
+	const DescriptorPool descriptorPools[] = { m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL, ML_POOL) };
 	commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
 
 	ResourceBarrier barrier;
@@ -117,7 +116,7 @@ void SuperResolution::Process(CommandList& commandList, const CommandRecorder& c
 
 void SuperResolution::Render(CommandList& commandList, RenderTarget& renderTarget)
 {
-	const DescriptorPool descriptorPools[] = { m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL) };
+	const DescriptorPool descriptorPools[] = { m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL, GRAPHICS_POOL) };
 	commandList.SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
 
 	ResourceBarrier barriers[2];
@@ -432,13 +431,13 @@ bool SuperResolution::createDescriptorTables()
 		};
 		XUSG::Util::DescriptorTable uavSrvTable;
 		uavSrvTable.SetDescriptors(0, static_cast<uint32_t>(size(descriptors)), descriptors);
-		X_RETURN(m_uavSrvTable, uavSrvTable.GetCbvSrvUavTable(m_descriptorTableCache), false);
+		X_RETURN(m_uavSrvTable, uavSrvTable.GetCbvSrvUavTable(m_descriptorTableCache, GRAPHICS_POOL), false);
 	}
 
 	{
 		XUSG::Util::DescriptorTable srvTable;
 		srvTable.SetDescriptors(0, 1, &m_modelOutput.GetSRV());
-		X_RETURN(m_srvTable, srvTable.GetCbvSrvUavTable(m_descriptorTableCache), false);
+		X_RETURN(m_srvTable, srvTable.GetCbvSrvUavTable(m_descriptorTableCache, GRAPHICS_POOL), false);
 	}
 
 	return true;
@@ -473,8 +472,8 @@ bool SuperResolution::initResources(CommandList& commandList,// const CommandAll
 		additionDescriptorsIdx = convDescriptorsIdx + convOpDescriptorCount * c_numConvLayers;
 		const auto descriptorCount = additionDescriptorsIdx + additionOpDescriptorCount;
 
-		N_RETURN(m_mlDescriptorTableCache.AllocateDescriptorPool(CBV_SRV_UAV_POOL, descriptorCount), false);
-		descriptorPool = m_mlDescriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL);
+		N_RETURN(m_descriptorTableCache.AllocateDescriptorPool(CBV_SRV_UAV_POOL, descriptorCount, ML_POOL), false);
+		descriptorPool = m_descriptorTableCache.GetDescriptorPool(CBV_SRV_UAV_POOL, ML_POOL);
 
 		// Operator initialization dispatches will use this heap right away
 		const DescriptorPool descriptorPools[] = { descriptorPool };

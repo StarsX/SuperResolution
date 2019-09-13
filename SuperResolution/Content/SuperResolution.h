@@ -33,6 +33,12 @@ protected:
 		NUM_OP
 	};
 
+	enum CbvSrvUavPoolIndex : uint8_t
+	{
+		GRAPHICS_POOL,
+		ML_POOL
+	};
+
 	struct ImageLayout
 	{
 		uint32_t Height;
@@ -60,7 +66,6 @@ protected:
 	XUSG::Graphics::PipelineCache	m_graphicsPipelineCache;
 	XUSG::Compute::PipelineCache	m_computePipelineCache;
 	XUSG::DescriptorTableCache		m_descriptorTableCache;
-	XUSG::DescriptorTableCache		m_mlDescriptorTableCache;
 
 	// Model layer sizes and indices
 	static const size_t	c_numUpsampleLayers = 2;

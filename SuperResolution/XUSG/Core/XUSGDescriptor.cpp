@@ -40,34 +40,34 @@ void Util::DescriptorTable::SetSamplers(uint32_t start, uint32_t num,
 		descriptors[start + i] = descriptorTableCache.GetSampler(presets[i]).get();
 }
 
-DescriptorTable Util::DescriptorTable::CreateCbvSrvUavTable(DescriptorTableCache& descriptorTableCache)
+DescriptorTable Util::DescriptorTable::CreateCbvSrvUavTable(DescriptorTableCache& descriptorTableCache, uint8_t index)
 {
-	return descriptorTableCache.createCbvSrvUavTable(m_key);
+	return descriptorTableCache.createCbvSrvUavTable(m_key, index);
 }
 
-DescriptorTable Util::DescriptorTable::GetCbvSrvUavTable(DescriptorTableCache& descriptorTableCache)
+DescriptorTable Util::DescriptorTable::GetCbvSrvUavTable(DescriptorTableCache& descriptorTableCache, uint8_t index)
 {
-	return descriptorTableCache.getCbvSrvUavTable(m_key);
+	return descriptorTableCache.getCbvSrvUavTable(m_key, index);
 }
 
-DescriptorTable Util::DescriptorTable::CreateSamplerTable(DescriptorTableCache& descriptorTableCache)
+DescriptorTable Util::DescriptorTable::CreateSamplerTable(DescriptorTableCache& descriptorTableCache, uint8_t index)
 {
-	return descriptorTableCache.createSamplerTable(m_key);
+	return descriptorTableCache.createSamplerTable(m_key, index);
 }
 
-DescriptorTable Util::DescriptorTable::GetSamplerTable(DescriptorTableCache& descriptorTableCache)
+DescriptorTable Util::DescriptorTable::GetSamplerTable(DescriptorTableCache& descriptorTableCache, uint8_t index)
 {
-	return descriptorTableCache.getSamplerTable(m_key);
+	return descriptorTableCache.getSamplerTable(m_key, index);
 }
 
-RenderTargetTable Util::DescriptorTable::CreateRtvTable(DescriptorTableCache& descriptorTableCache)
+RenderTargetTable Util::DescriptorTable::CreateRtvTable(DescriptorTableCache& descriptorTableCache, uint8_t index)
 {
-	return descriptorTableCache.createRtvTable(m_key);
+	return descriptorTableCache.createRtvTable(m_key, index);
 }
 
-RenderTargetTable Util::DescriptorTable::GetRtvTable(DescriptorTableCache& descriptorTableCache)
+RenderTargetTable Util::DescriptorTable::GetRtvTable(DescriptorTableCache& descriptorTableCache, uint8_t index)
 {
-	return descriptorTableCache.getRtvTable(m_key);
+	return descriptorTableCache.getRtvTable(m_key, index);
 }
 
 const string& Util::DescriptorTable::GetKey() const
@@ -130,44 +130,46 @@ void DescriptorTableCache::SetName(const wchar_t* name)
 	if (name) m_name = name;
 }
 
-bool DescriptorTableCache::AllocateDescriptorPool(DescriptorPoolType type, uint32_t numDescriptors)
+bool DescriptorTableCache::AllocateDescriptorPool(DescriptorPoolType type, uint32_t numDescriptors, uint8_t index)
 {
-	return allocateDescriptorPool(type, numDescriptors);
+	checkDescriptorPoolTypeStorage(type, index);
+
+	return allocateDescriptorPool(type, numDescriptors, index);
 }
 
-DescriptorTable DescriptorTableCache::CreateCbvSrvUavTable(const Util::DescriptorTable& util)
+DescriptorTable DescriptorTableCache::CreateCbvSrvUavTable(const Util::DescriptorTable& util, uint8_t index)
 {
-	return createCbvSrvUavTable(util.GetKey());
+	return createCbvSrvUavTable(util.GetKey(), index);
 }
 
-DescriptorTable DescriptorTableCache::GetCbvSrvUavTable(const Util::DescriptorTable& util)
+DescriptorTable DescriptorTableCache::GetCbvSrvUavTable(const Util::DescriptorTable& util, uint8_t index)
 {
-	return getCbvSrvUavTable(util.GetKey());
+	return getCbvSrvUavTable(util.GetKey(), index);
 }
 
-DescriptorTable DescriptorTableCache::CreateSamplerTable(const Util::DescriptorTable& util)
+DescriptorTable DescriptorTableCache::CreateSamplerTable(const Util::DescriptorTable& util, uint8_t index)
 {
-	return createSamplerTable(util.GetKey());
+	return createSamplerTable(util.GetKey(), index);
 }
 
-DescriptorTable DescriptorTableCache::GetSamplerTable(const Util::DescriptorTable& util)
+DescriptorTable DescriptorTableCache::GetSamplerTable(const Util::DescriptorTable& util, uint8_t index)
 {
-	return getSamplerTable(util.GetKey());
+	return getSamplerTable(util.GetKey(), index);
 }
 
-RenderTargetTable DescriptorTableCache::CreateRtvTable(const Util::DescriptorTable& util)
+RenderTargetTable DescriptorTableCache::CreateRtvTable(const Util::DescriptorTable& util, uint8_t index)
 {
-	return createRtvTable(util.GetKey());
+	return createRtvTable(util.GetKey(), index);
 }
 
-RenderTargetTable DescriptorTableCache::GetRtvTable(const Util::DescriptorTable& util)
+RenderTargetTable DescriptorTableCache::GetRtvTable(const Util::DescriptorTable& util, uint8_t index)
 {
-	return getRtvTable(util.GetKey());
+	return getRtvTable(util.GetKey(), index);
 }
 
-const DescriptorPool& DescriptorTableCache::GetDescriptorPool(DescriptorPoolType type) const
+const DescriptorPool& DescriptorTableCache::GetDescriptorPool(DescriptorPoolType type, uint8_t index) const
 {
-	return m_descriptorPools[type];
+	return m_descriptorPools[type][index];
 }
 
 const shared_ptr<Sampler>& DescriptorTableCache::GetSampler(SamplerPreset preset)
@@ -183,7 +185,19 @@ uint32_t DescriptorTableCache::GetDescriptorStride(DescriptorPoolType type) cons
 	return m_descriptorStrides[type];
 }
 
-bool DescriptorTableCache::allocateDescriptorPool(DescriptorPoolType type, uint32_t numDescriptors)
+void DescriptorTableCache::checkDescriptorPoolTypeStorage(DescriptorPoolType type, uint8_t index)
+{
+	if (index >= m_descriptorPools[type].size())
+		m_descriptorPools[type].resize(index + 1);
+
+	if (index >= m_descriptorCounts[type].size())
+		m_descriptorCounts[type].resize(index + 1);
+
+	if (index >= m_descriptorKeyPtrs[type].size())
+		m_descriptorKeyPtrs[type].resize(index + 1);
+}
+
+bool DescriptorTableCache::allocateDescriptorPool(DescriptorPoolType type, uint32_t numDescriptors, uint8_t index)
 {
 	static const D3D12_DESCRIPTOR_HEAP_TYPE heapTypes[NUM_DESCRIPTOR_POOL] =
 	{
@@ -203,30 +217,32 @@ bool DescriptorTableCache::allocateDescriptorPool(DescriptorPoolType type, uint3
 	desc.NumDescriptors = numDescriptors;
 	desc.Type = heapTypes[type];
 	if (type != D3D12_DESCRIPTOR_HEAP_TYPE_RTV) desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_SHADER_VISIBLE;
-	V_RETURN(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_descriptorPools[type])), cerr, false);
-	if (!m_name.empty()) m_descriptorPools[type]->SetName((m_name + poolNames[type]).c_str());
+	V_RETURN(m_device->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&m_descriptorPools[type][index])), cerr, false);
+	if (!m_name.empty()) m_descriptorPools[type][index]->SetName((m_name + poolNames[type]).c_str());
 
-	m_descriptorCounts[type] = 0;
+	m_descriptorCounts[type][index] = 0;
 
 	return true;
 }
 
-bool DescriptorTableCache::reallocateCbvSrvUavPool(const string& key)
+bool DescriptorTableCache::reallocateCbvSrvUavPool(const string& key, uint8_t index)
 {
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Descriptor));
 
+	checkDescriptorPoolTypeStorage(CBV_SRV_UAV_POOL, index);
+
 	// Allocate a new pool if neccessary
-	const auto& descriptorPool = m_descriptorPools[CBV_SRV_UAV_POOL];
-	const auto descriptorCount = m_descriptorCounts[CBV_SRV_UAV_POOL] + numDescriptors;
+	const auto& descriptorPool = m_descriptorPools[CBV_SRV_UAV_POOL][index];
+	const auto descriptorCount = m_descriptorCounts[CBV_SRV_UAV_POOL][index] + numDescriptors;
 	if (!descriptorPool || descriptorPool->GetDesc().NumDescriptors < descriptorCount)
 	{
-		N_RETURN(allocateDescriptorPool(CBV_SRV_UAV_POOL, descriptorCount), false);
+		N_RETURN(allocateDescriptorPool(CBV_SRV_UAV_POOL, descriptorCount, index), false);
 
 		// Recreate descriptor tables
-		for (const auto& pKey : m_descriptorKeyPtrs[CBV_SRV_UAV_POOL])
+		for (const auto& pKey : m_descriptorKeyPtrs[CBV_SRV_UAV_POOL][index])
 		{
-			const auto table = createCbvSrvUavTable(*pKey);
+			const auto table = createCbvSrvUavTable(*pKey, index);
 			*m_cbvSrvUavTables[*pKey] = *table;
 		}
 	}
@@ -234,22 +250,24 @@ bool DescriptorTableCache::reallocateCbvSrvUavPool(const string& key)
 	return true;
 }
 
-bool DescriptorTableCache::reallocateSamplerPool(const string& key)
+bool DescriptorTableCache::reallocateSamplerPool(const string& key, uint8_t index)
 {
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Sampler*));
 
+	checkDescriptorPoolTypeStorage(SAMPLER_POOL, index);
+
 	// Allocate a new pool if neccessary
-	const auto& descriptorPool = m_descriptorPools[SAMPLER_POOL];
-	const auto descriptorCount = m_descriptorCounts[SAMPLER_POOL] + numDescriptors;
+	const auto& descriptorPool = m_descriptorPools[SAMPLER_POOL][index];
+	const auto descriptorCount = m_descriptorCounts[SAMPLER_POOL][index] + numDescriptors;
 	if (!descriptorPool || descriptorPool->GetDesc().NumDescriptors < descriptorCount)
 	{
-		N_RETURN(allocateDescriptorPool(SAMPLER_POOL, descriptorCount), false);
+		N_RETURN(allocateDescriptorPool(SAMPLER_POOL, descriptorCount, index), false);
 
 		// Recreate descriptor tables
-		for (const auto& pKey : m_descriptorKeyPtrs[SAMPLER_POOL])
+		for (const auto& pKey : m_descriptorKeyPtrs[SAMPLER_POOL][index])
 		{
-			const auto table = createSamplerTable(*pKey);
+			const auto table = createSamplerTable(*pKey, index);
 			*m_samplerTables[*pKey] = *table;
 		}
 	}
@@ -257,22 +275,24 @@ bool DescriptorTableCache::reallocateSamplerPool(const string& key)
 	return true;
 }
 
-bool DescriptorTableCache::reallocateRtvPool(const string& key)
+bool DescriptorTableCache::reallocateRtvPool(const string& key, uint8_t index)
 {
 	assert(key.size() > 0);
 	const auto numDescriptors = static_cast<uint32_t>(key.size() / sizeof(Descriptor));
 
+	checkDescriptorPoolTypeStorage(RTV_POOL, index);
+
 	// Allocate a new pool if neccessary
-	const auto& descriptorPool = m_descriptorPools[RTV_POOL];
-	const auto descriptorCount = m_descriptorCounts[RTV_POOL] + numDescriptors;
+	const auto& descriptorPool = m_descriptorPools[RTV_POOL][index];
+	const auto descriptorCount = m_descriptorCounts[RTV_POOL][index] + numDescriptors;
 	if (!descriptorPool || descriptorPool->GetDesc().NumDescriptors < descriptorCount)
 	{
-		N_RETURN(allocateDescriptorPool(RTV_POOL, descriptorCount), false);
+		N_RETURN(allocateDescriptorPool(RTV_POOL, descriptorCount, index), false);
 
 		// Recreate descriptor tables
-		for (const auto& pKey : m_descriptorKeyPtrs[RTV_POOL])
+		for (const auto& pKey : m_descriptorKeyPtrs[RTV_POOL][index])
 		{
-			const auto table = createRtvTable(*pKey);
+			const auto table = createRtvTable(*pKey, index);
 			*m_rtvTables[*pKey] = *table;
 		}
 	}
@@ -280,7 +300,7 @@ bool DescriptorTableCache::reallocateRtvPool(const string& key)
 	return true;
 }
 
-DescriptorTable DescriptorTableCache::createCbvSrvUavTable(const string& key)
+DescriptorTable DescriptorTableCache::createCbvSrvUavTable(const string& key, uint8_t index)
 {
 	if (key.size() > 0)
 	{
@@ -288,9 +308,9 @@ DescriptorTable DescriptorTableCache::createCbvSrvUavTable(const string& key)
 		const auto descriptors = reinterpret_cast<const Descriptor*>(&key[0]);
 
 		// Compute start addresses for CPU and GPU handles
-		const auto& descriptorPool = m_descriptorPools[CBV_SRV_UAV_POOL];
+		const auto& descriptorPool = m_descriptorPools[CBV_SRV_UAV_POOL][index];
 		const auto& descriptorStride = m_descriptorStrides[CBV_SRV_UAV_POOL];
-		auto& descriptorCount = m_descriptorCounts[CBV_SRV_UAV_POOL];
+		auto& descriptorCount = m_descriptorCounts[CBV_SRV_UAV_POOL][index];
 		Descriptor descriptor(descriptorPool->GetCPUDescriptorHandleForHeapStart(), descriptorCount, descriptorStride);
 		DescriptorTable table = make_shared<DescriptorView>(descriptorPool->GetGPUDescriptorHandleForHeapStart(),
 			descriptorCount, descriptorStride);
@@ -310,18 +330,18 @@ DescriptorTable DescriptorTableCache::createCbvSrvUavTable(const string& key)
 	return nullptr;
 }
 
-DescriptorTable DescriptorTableCache::getCbvSrvUavTable(const string& key)
+DescriptorTable DescriptorTableCache::getCbvSrvUavTable(const string& key, uint8_t index)
 {
 	if (key.size() > 0)
 	{
 		const auto tableIter = m_cbvSrvUavTables.find(key);
 
 		// Create one, if it does not exist
-		if (tableIter == m_cbvSrvUavTables.end() && reallocateCbvSrvUavPool(key))
+		if (tableIter == m_cbvSrvUavTables.end() && reallocateCbvSrvUavPool(key, index))
 		{
-			const auto table = createCbvSrvUavTable(key);
+			const auto table = createCbvSrvUavTable(key, index);
 			m_cbvSrvUavTables[key] = table;
-			m_descriptorKeyPtrs[CBV_SRV_UAV_POOL].push_back(&m_cbvSrvUavTables.find(key)->first);
+			m_descriptorKeyPtrs[CBV_SRV_UAV_POOL][index].push_back(&m_cbvSrvUavTables.find(key)->first);
 
 			return table;
 		}
@@ -332,7 +352,7 @@ DescriptorTable DescriptorTableCache::getCbvSrvUavTable(const string& key)
 	return nullptr;
 }
 
-DescriptorTable DescriptorTableCache::createSamplerTable(const string& key)
+DescriptorTable DescriptorTableCache::createSamplerTable(const string& key, uint8_t index)
 {
 	if (key.size() > 0)
 	{
@@ -340,9 +360,9 @@ DescriptorTable DescriptorTableCache::createSamplerTable(const string& key)
 		const auto descriptors = reinterpret_cast<const Sampler* const*>(&key[0]);
 
 		// Compute start addresses for CPU and GPU handles
-		const auto& descriptorPool = m_descriptorPools[SAMPLER_POOL];
+		const auto& descriptorPool = m_descriptorPools[SAMPLER_POOL][index];
 		const auto& descriptorStride = m_descriptorStrides[SAMPLER_POOL];
-		auto& descriptorCount = m_descriptorCounts[SAMPLER_POOL];
+		auto& descriptorCount = m_descriptorCounts[SAMPLER_POOL][index];
 		Descriptor descriptor(descriptorPool->GetCPUDescriptorHandleForHeapStart(), descriptorCount, descriptorStride);
 		DescriptorTable table = make_shared<DescriptorView>(descriptorPool->GetGPUDescriptorHandleForHeapStart(),
 			descriptorCount, descriptorStride);
@@ -362,18 +382,18 @@ DescriptorTable DescriptorTableCache::createSamplerTable(const string& key)
 	return nullptr;
 }
 
-DescriptorTable DescriptorTableCache::getSamplerTable(const string& key)
+DescriptorTable DescriptorTableCache::getSamplerTable(const string& key, uint8_t index)
 {
 	if (key.size() > 0)
 	{
 		const auto tableIter = m_samplerTables.find(key);
 
 		// Create one, if it does not exist
-		if (tableIter == m_samplerTables.end() && reallocateSamplerPool(key))
+		if (tableIter == m_samplerTables.end() && reallocateSamplerPool(key, index))
 		{
-			const auto table = createSamplerTable(key);
+			const auto table = createSamplerTable(key, index);
 			m_samplerTables[key] = table;
-			m_descriptorKeyPtrs[SAMPLER_POOL].push_back(&m_samplerTables.find(key)->first);
+			m_descriptorKeyPtrs[SAMPLER_POOL][index].push_back(&m_samplerTables.find(key)->first);
 
 			return table;
 		}
@@ -384,7 +404,7 @@ DescriptorTable DescriptorTableCache::getSamplerTable(const string& key)
 	return nullptr;
 }
 
-RenderTargetTable DescriptorTableCache::createRtvTable(const string& key)
+RenderTargetTable DescriptorTableCache::createRtvTable(const string& key, uint8_t index)
 {
 	if (key.size() > 0)
 	{
@@ -392,9 +412,9 @@ RenderTargetTable DescriptorTableCache::createRtvTable(const string& key)
 		const auto descriptors = reinterpret_cast<const Descriptor*>(&key[0]);
 
 		// Compute start addresses for CPU and GPU handles
-		const auto& descriptorPool = m_descriptorPools[RTV_POOL];
+		const auto& descriptorPool = m_descriptorPools[RTV_POOL][index];
 		const auto& descriptorStride = m_descriptorStrides[RTV_POOL];
-		auto& descriptorCount = m_descriptorCounts[RTV_POOL];
+		auto& descriptorCount = m_descriptorCounts[RTV_POOL][index];
 		Descriptor descriptor(descriptorPool->GetCPUDescriptorHandleForHeapStart(), descriptorCount, descriptorStride);
 		RenderTargetTable table = make_shared<Descriptor>();
 		*table = descriptor;
@@ -414,18 +434,18 @@ RenderTargetTable DescriptorTableCache::createRtvTable(const string& key)
 	return nullptr;
 }
 
-RenderTargetTable DescriptorTableCache::getRtvTable(const string& key)
+RenderTargetTable DescriptorTableCache::getRtvTable(const string& key, uint8_t index)
 {
 	if (key.size() > 0)
 	{
 		const auto tableIter = m_rtvTables.find(key);
 
 		// Create one, if it does not exist
-		if (tableIter == m_rtvTables.end() && reallocateRtvPool(key))
+		if (tableIter == m_rtvTables.end() && reallocateRtvPool(key, index))
 		{
-			const auto table = createRtvTable(key);
+			const auto table = createRtvTable(key, index);
 			m_rtvTables[key] = table;
-			m_descriptorKeyPtrs[RTV_POOL].push_back(&m_rtvTables.find(key)->first);
+			m_descriptorKeyPtrs[RTV_POOL][index].push_back(&m_rtvTables.find(key)->first);
 
 			return table;
 		}
