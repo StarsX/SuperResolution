@@ -430,14 +430,14 @@ bool SuperResolution::createDescriptorTables()
 			m_inputImage->GetSRV()
 		};
 		XUSG::Util::DescriptorTable uavSrvTable;
-		uavSrvTable.SetDescriptors(0, static_cast<uint32_t>(size(descriptors)), descriptors);
-		X_RETURN(m_uavSrvTable, uavSrvTable.GetCbvSrvUavTable(m_descriptorTableCache, GRAPHICS_POOL), false);
+		uavSrvTable.SetDescriptors(0, static_cast<uint32_t>(size(descriptors)), descriptors, GRAPHICS_POOL);
+		X_RETURN(m_uavSrvTable, uavSrvTable.GetCbvSrvUavTable(m_descriptorTableCache), false);
 	}
 
 	{
 		XUSG::Util::DescriptorTable srvTable;
-		srvTable.SetDescriptors(0, 1, &m_modelOutput.GetSRV());
-		X_RETURN(m_srvTable, srvTable.GetCbvSrvUavTable(m_descriptorTableCache, GRAPHICS_POOL), false);
+		srvTable.SetDescriptors(0, 1, &m_modelOutput.GetSRV(), GRAPHICS_POOL);
+		X_RETURN(m_srvTable, srvTable.GetCbvSrvUavTable(m_descriptorTableCache), false);
 	}
 
 	return true;
