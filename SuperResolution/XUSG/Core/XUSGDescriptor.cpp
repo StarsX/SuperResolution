@@ -133,6 +133,32 @@ void DescriptorTableCache::SetName(const wchar_t* name)
 	if (name) m_name = name;
 }
 
+void DescriptorTableCache::ResetDescriptorPool(DescriptorPoolType type, uint8_t index)
+{
+	//if (index < m_descriptorPools[type].size()) m_descriptorPools[type][index].Reset();
+	if (index < m_descriptorCounts[type].size()) m_descriptorCounts[type][index] = 0;
+	if (index < m_descriptorKeyPtrs[type].size())
+	{
+		switch (type)
+		{
+		case CBV_SRV_UAV_POOL:
+			for (const auto& pKey : m_descriptorKeyPtrs[type][index])
+				m_cbvSrvUavTables.erase(*pKey);
+			break;
+		case SAMPLER_POOL:
+			for (const auto& pKey : m_descriptorKeyPtrs[type][index])
+				m_samplerTables.erase(*pKey);
+			break;
+		case RTV_POOL:
+			for (const auto& pKey : m_descriptorKeyPtrs[type][index])
+				m_rtvTables.erase(*pKey);
+			break;
+		}
+
+		m_descriptorKeyPtrs[type][index].clear();
+	}
+}
+
 bool DescriptorTableCache::AllocateDescriptorPool(DescriptorPoolType type, uint32_t numDescriptors, uint8_t index)
 {
 	checkDescriptorPoolTypeStorage(type, index);
