@@ -23,6 +23,7 @@ SuperResolutionX::SuperResolutionX(uint32_t width, uint32_t height, std::wstring
 	m_fileName(L"Assets/Lena.dds")
 {
 #if defined (_DEBUG)
+	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 	AllocConsole();
 	FILE* stream;
 	freopen_s(&stream, "CONOUT$", "w+t", stdout);
