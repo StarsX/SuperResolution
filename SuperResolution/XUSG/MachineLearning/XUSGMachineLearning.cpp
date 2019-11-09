@@ -226,14 +226,14 @@ bool Binding::Create(const ML::Device& device, const Operator& dispatchable, con
 	m_descriptorStride = parent->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_CBV_SRV_UAV);
 
 	Descriptor descriptor(descriptorPool->GetCPUDescriptorHandleForHeapStart());
-	DescriptorView descriptorView(descriptorPool->GetGPUDescriptorHandleForHeapStart());
+	DescriptorTable::element_type descriptorHandle(descriptorPool->GetGPUDescriptorHandleForHeapStart());
 	descriptor.Offset(descriptorOffset, m_descriptorStride);
-	descriptorView.Offset(descriptorOffset, m_descriptorStride);
+	descriptorHandle.Offset(descriptorOffset, m_descriptorStride);
 
 	DML_BINDING_TABLE_DESC dmlBindingTableDesc = {};
 	dmlBindingTableDesc.Dispatchable = dispatchable.GetDispatchable().get();
 	dmlBindingTableDesc.CPUDescriptorHandle = descriptor;
-	dmlBindingTableDesc.GPUDescriptorHandle = descriptorView;
+	dmlBindingTableDesc.GPUDescriptorHandle = descriptorHandle;
 	dmlBindingTableDesc.SizeInDescriptors = descriptorCount;
 
 	V_RETURN(device->CreateBindingTable(&dmlBindingTableDesc, IID_PPV_ARGS(&m_bindingTable)), cerr, false);
@@ -246,14 +246,14 @@ bool Binding::Reset(const Operator& dispatchable, const DescriptorPool& descript
 	uint32_t descriptorCount, int32_t descriptorOffset)
 {
 	Descriptor descriptor(descriptorPool->GetCPUDescriptorHandleForHeapStart());
-	DescriptorView descriptorView(descriptorPool->GetGPUDescriptorHandleForHeapStart());
+	DescriptorTable::element_type descriptorHandle(descriptorPool->GetGPUDescriptorHandleForHeapStart());
 	descriptor.Offset(descriptorOffset, m_descriptorStride);
-	descriptorView.Offset(descriptorOffset, m_descriptorStride);
+	descriptorHandle.Offset(descriptorOffset, m_descriptorStride);
 
 	DML_BINDING_TABLE_DESC dmlBindingTableDesc = {};
 	dmlBindingTableDesc.Dispatchable = dispatchable.GetDispatchable().get();
 	dmlBindingTableDesc.CPUDescriptorHandle = descriptor;
-	dmlBindingTableDesc.GPUDescriptorHandle = descriptorView;
+	dmlBindingTableDesc.GPUDescriptorHandle = descriptorHandle;
 	dmlBindingTableDesc.SizeInDescriptors = descriptorCount;
 
 	V_RETURN(m_bindingTable->Reset(&dmlBindingTableDesc), cerr, false);
