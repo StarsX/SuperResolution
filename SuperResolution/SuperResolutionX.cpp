@@ -20,7 +20,7 @@ SuperResolutionX::SuperResolutionX(uint32_t width, uint32_t height, std::wstring
 	m_updateImage(false),
 	m_showFPS(true),
 	m_pausing(false),
-	m_fileName(L"Assets/Sashimi.dds")
+	m_fileName(L"Assets/Sashimi128.dds")
 {
 #if defined (_DEBUG)
 	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);

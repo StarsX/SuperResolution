@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------------------------
-// By Stars XU Tianchen
+// Copyright (c) XU, Tianchen. All rights reserved.
 //--------------------------------------------------------------------------------------
 
 #include "DXFrameworkHelper.h"
@@ -168,9 +168,13 @@ OperatorInitializer::~OperatorInitializer()
 
 bool OperatorInitializer::Create(const ML::Device& device, const Operator* pOperators, uint32_t numOperators)
 {
+	vector<com_ptr<IDMLCompiledOperator>> compiledOperators(numOperators);
 	vector<IDMLCompiledOperator*> dmlCompiledOperators(numOperators);
 	for (auto i = 0u; i < numOperators; ++i)
-		dmlCompiledOperators[i] = dynamic_cast<IDMLCompiledOperator*>(pOperators[i].GetDispatchable().get());
+	{
+		pOperators[i].GetDispatchable()->QueryInterface(IID_PPV_ARGS(&compiledOperators[i]));
+		dmlCompiledOperators[i] = compiledOperators[i].get();
+	}
 
 	com_ptr<IDMLOperatorInitializer> dmlOperatorInitializer;
 	V_RETURN(device->CreateOperatorInitializer(numOperators, dmlCompiledOperators.data(),
