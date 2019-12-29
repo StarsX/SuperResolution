@@ -286,20 +286,22 @@ bool SuperResolution::createResources(CommandList& commandList, const CommandRec
 	{
 		// Resource for input tensor
 		auto numElements = static_cast<uint32_t>(modelInputBufferSize / dataStride);
-		N_RETURN(m_modelInput.Create(m_device, numElements, dataStride, format, ResourceFlag::ALLOW_UNORDERED_ACCESS,
-			MemoryType::DEFAULT, ResourceState::COMMON, 0, nullptr, 1, nullptr, L"InputBuffer"), false);
+		N_RETURN(m_modelInput.Create(m_device, numElements, dataStride, format,
+			ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0,
+			nullptr, 1, nullptr, L"InputBuffer"), false);
 
 		// Model result tensor is 2x larger in both dimensions
 		numElements = static_cast<uint32_t>(modelOutputBufferSize / dataStride);
-		N_RETURN(m_modelOutput.Create(m_device, numElements, dataStride, format, ResourceFlag::ALLOW_UNORDERED_ACCESS,
-			MemoryType::DEFAULT, ResourceState::COMMON, 1, nullptr, 0, nullptr, L"OutputBuffer"), false);
+		N_RETURN(m_modelOutput.Create(m_device, numElements, dataStride, format,
+			ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 1,
+			nullptr, 0, nullptr, L"OutputBuffer"), false);
 
 		// Create two resources for intermediate layer results. Each layer will ping-pong between these. They're each large
 		// enough to hold the largest intermediate result required.
 		for (auto i = 0ui8; i < 2; ++i)
 			N_RETURN(m_modelIntermediateResult[i].Create(m_device, intermediateBufferMaxSize[i],
-				ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, ResourceState::COMMON,
-				0, nullptr, 0, nullptr, (L"IntermediateResultBuffer" + to_wstring(i)).c_str()), false);
+				ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr, 0,
+				nullptr, (L"IntermediateResultBuffer" + to_wstring(i)).c_str()), false);
 	}
 
 	return true;
@@ -325,14 +327,16 @@ bool SuperResolution::createWeightTensors(const CommandList& commandList, Weight
 
 	uploaders.push_back(nullptr);
 	N_RETURN(createWeightResource(filterSizes, filterWeightBuffer), false);
-	N_RETURN(filterWeightBuffer.Upload(commandList, uploaders.back(), filterWeights.data(), filterWeights.size()), false);
+	N_RETURN(filterWeightBuffer.Upload(commandList, uploaders.back(), ResourceState::UNORDERED_ACCESS,
+		filterWeights.data(), filterWeights.size()), false);
 
 	if (useScaleShift)
 	{
 		const uint32_t biasSizes[] = { 1, filterSizes[0], 1, 1 };	// One bias per output channel
 		uploaders.push_back(nullptr);
 		N_RETURN(createWeightResource(biasSizes, *pBiasWeightBuffer), false);
-		N_RETURN(pBiasWeightBuffer->Upload(commandList, uploaders.back(), biasWeights.data(), biasWeights.size()), false);
+		N_RETURN(pBiasWeightBuffer->Upload(commandList, uploaders.back(), ResourceState::UNORDERED_ACCESS,
+			biasWeights.data(), biasWeights.size()), false);
 
 		// The scale weights will be premultiplied into the filter weights, so they don't need
 		// a separate resource.
@@ -351,7 +355,7 @@ bool SuperResolution::createWeightResource(const uint32_t tensorSizes[4], RawBuf
 	const auto bufferSize = tensor.Create(m_tensorDataType, static_cast<uint32_t>(size(strides)), tensorSizes, strides);
 
 	return resourceOut.Create(m_device, bufferSize, ResourceFlag::ALLOW_UNORDERED_ACCESS,
-		MemoryType::DEFAULT, ResourceState::COMMON, 0, nullptr, 0, nullptr, L"WeightBuffer");
+		MemoryType::DEFAULT, 0, nullptr, 0, nullptr, L"WeightBuffer");
 }
 
 bool SuperResolution::createPipelineLayouts()
@@ -487,8 +491,8 @@ bool SuperResolution::initResources(CommandList& commandList,// const CommandAll
 			const auto persistentResourceSize = m_upsampleOps[i].GetPersistentResourceSize();
 			if (persistentResourceSize > 0)
 				N_RETURN(m_modelUpsamplePersistentResources[i].Create(m_device, persistentResourceSize,
-					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, ResourceState::COMMON,
-					0, nullptr, 0, nullptr, (L"UpSamplePersistent" + to_wstring(i)).c_str()), false);
+					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr, 0,
+					nullptr, (L"UpSamplePersistent" + to_wstring(i)).c_str()), false);
 		}
 
 		for (auto i = 0u; i < c_numConvLayers; ++i)
@@ -496,16 +500,16 @@ bool SuperResolution::initResources(CommandList& commandList,// const CommandAll
 			const auto persistentResourceSize = m_convOps[i].GetPersistentResourceSize();
 			if (persistentResourceSize > 0)
 				N_RETURN(m_modelConvPersistentResources[i].Create(m_device, persistentResourceSize,
-					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, ResourceState::COMMON,
-					0, nullptr, 0, nullptr, (L"ConvPersistent" + to_wstring(i)).c_str()), false);
+					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr, 0,
+					nullptr, (L"ConvPersistent" + to_wstring(i)).c_str()), false);
 		}
 
 		{
 			const auto persistentResourceSize = m_addResidualOp.GetPersistentResourceSize();
 			if (persistentResourceSize > 0)
 				N_RETURN(m_modelAddPersistentResource.Create(m_device, persistentResourceSize,
-					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, ResourceState::COMMON,
-					0, nullptr, 0, nullptr, L"AddPersistent"), false);
+					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr,
+					0, nullptr, L"AddPersistent"), false);
 		}
 	}
 
@@ -528,7 +532,7 @@ bool SuperResolution::initResources(CommandList& commandList,// const CommandAll
 		if (temporaryResourceSize > 0)
 		{
 			N_RETURN(tempResource.Create(m_device, temporaryResourceSize, ResourceFlag::ALLOW_UNORDERED_ACCESS,
-				MemoryType::DEFAULT, ResourceState::COMMON, 0, nullptr, 0, nullptr, name), false);
+				MemoryType::DEFAULT, 0, nullptr, 0, nullptr, name), false);
 			binding.BindTemporary(tempResource);
 		}
 
