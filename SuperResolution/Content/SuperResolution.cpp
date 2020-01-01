@@ -327,16 +327,16 @@ bool SuperResolution::createWeightTensors(const CommandList& commandList, Weight
 
 	uploaders.push_back(nullptr);
 	N_RETURN(createWeightResource(filterSizes, filterWeightBuffer), false);
-	N_RETURN(filterWeightBuffer.Upload(commandList, uploaders.back(), ResourceState::UNORDERED_ACCESS,
-		filterWeights.data(), filterWeights.size()), false);
+	N_RETURN(filterWeightBuffer.Upload(commandList, uploaders.back(), filterWeights.data(),
+		filterWeights.size(), 0, ResourceState::UNORDERED_ACCESS), false);
 
 	if (useScaleShift)
 	{
 		const uint32_t biasSizes[] = { 1, filterSizes[0], 1, 1 };	// One bias per output channel
 		uploaders.push_back(nullptr);
 		N_RETURN(createWeightResource(biasSizes, *pBiasWeightBuffer), false);
-		N_RETURN(pBiasWeightBuffer->Upload(commandList, uploaders.back(), ResourceState::UNORDERED_ACCESS,
-			biasWeights.data(), biasWeights.size()), false);
+		N_RETURN(pBiasWeightBuffer->Upload(commandList, uploaders.back(), biasWeights.data(),
+			biasWeights.size(), 0, ResourceState::UNORDERED_ACCESS), false);
 
 		// The scale weights will be premultiplied into the filter weights, so they don't need
 		// a separate resource.
