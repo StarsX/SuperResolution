@@ -13,6 +13,7 @@
 
 using namespace std;
 using namespace XUSG;
+using namespace XUSG::ML;
 
 SuperResolutionX::SuperResolutionX(uint32_t width, uint32_t height, std::wstring name) :
 	DXFramework(width, height, name),
@@ -86,7 +87,7 @@ void SuperResolutionX::LoadPipeline(vector<Resource>& uploaders)
 	ThrowIfFailed(hr);
 
 	// Create the command queue.
-	N_RETURN(m_device->GetCommandQueue(m_commandQueue, CommandListType::DIRECT, CommandQueueFlags::NONE), ThrowIfFailed(E_FAIL));
+	N_RETURN(m_device->GetCommandQueue(m_commandQueue, CommandListType::DIRECT, CommandQueueFlag::NONE), ThrowIfFailed(E_FAIL));
 
 	// This sample does not support fullscreen transitions.
 	ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
@@ -96,8 +97,8 @@ void SuperResolutionX::LoadPipeline(vector<Resource>& uploaders)
 		N_RETURN(m_device->GetCommandAllocator(m_commandAllocators[n], CommandListType::DIRECT), ThrowIfFailed(E_FAIL));
 
 	// Create the command list.
-	N_RETURN(m_device->GetCommandList(m_commandList.GetCommandList(), 0, CommandListType::DIRECT,
-		m_commandAllocators[0], nullptr), ThrowIfFailed(E_FAIL));
+	m_commandList = CommandList::MakeUnique();
+	N_RETURN(m_device->GetCommandList(*m_commandList, 0, CommandListType::DIRECT, m_commandAllocators[0], nullptr), ThrowIfFailed(E_FAIL));
 
 	N_RETURN(InitTensors(uploaders), ThrowIfFailed(E_FAIL));
 	m_width = m_superResolution->GetOutWidth();
@@ -141,16 +142,19 @@ void SuperResolutionX::LoadPipeline(vector<Resource>& uploaders)
 	// Create frame resources.
 	// Create a RTV for each frame.
 	for (auto n = 0u; n < FrameCount; ++n)
-		N_RETURN(m_renderTargets[n].CreateFromSwapChain(m_device, m_swapChain, n), ThrowIfFailed(E_FAIL));
+	{
+		m_renderTargets[n] = RenderTarget::MakeUnique();
+		N_RETURN(m_renderTargets[n]->CreateFromSwapChain(m_device, m_swapChain, n), ThrowIfFailed(E_FAIL));
+	}
 }
 
 // Load the sample assets.
 void SuperResolutionX::LoadAssets()
 {
 	// Close the command list and execute it to begin the initial GPU setup.
-	ThrowIfFailed(m_commandList.Close());
-	BaseCommandList* const ppCommandLists[] = { m_commandList.GetCommandList().get() };
-	m_commandQueue->ExecuteCommandLists(static_cast<uint32_t>(size(ppCommandLists)), ppCommandLists);
+	const auto pCommandList = m_commandList.get();
+	ThrowIfFailed(pCommandList->Close());
+	m_commandQueue->SubmitCommandList(pCommandList);
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
@@ -182,11 +186,12 @@ bool SuperResolutionX::InitTensors(vector<Resource>& uploaders)
 	ThrowIfFailed(DMLCreateDevice(m_device.get(), dmlCreateDeviceFlags, IID_PPV_ARGS(&m_mlDevice)));
 
 	// The command recorder is a stateless object that records Dispatches into an existing Direct3D 12 command list.
-	ThrowIfFailed(m_mlDevice->CreateCommandRecorder(IID_PPV_ARGS(&m_mlCommandRecorder)));
+	m_mlCommandRecorder = CommandRecorder::MakeUnique();
+	N_RETURN(m_mlDevice->GetCommandRecorder(*m_mlCommandRecorder), false);
 
 	X_RETURN(m_superResolution, make_unique<SuperResolution>(m_device, m_mlDevice), false);
 
-	return m_superResolution->Init(m_commandList, m_mlCommandRecorder, m_vendorId, uploaders, m_fileName.c_str());
+	return m_superResolution->Init(m_commandList.get(), m_mlCommandRecorder.get(), m_vendorId, uploaders, m_fileName.c_str());
 }
 
 // Update frame-based values.
@@ -208,8 +213,7 @@ void SuperResolutionX::OnRender()
 	PopulateCommandList();
 
 	// Execute the command list.
-	BaseCommandList* const ppCommandLists[] = { m_commandList.GetCommandList().get() };
-	m_commandQueue->ExecuteCommandLists(static_cast<uint32_t>(size(ppCommandLists)), ppCommandLists);
+	m_commandQueue->SubmitCommandList(m_commandList.get());
 
 	// Present the frame.
 	ThrowIfFailed(m_swapChain->Present(0, 0));
@@ -267,22 +271,23 @@ void SuperResolutionX::PopulateCommandList()
 	// However, when ExecuteCommandList() is called on a particular command 
 	// list, that command list can then be reset at any time and must be before 
 	// re-recording.
-	ThrowIfFailed(m_commandList.Reset(m_commandAllocators[m_frameIndex], nullptr));
+	const auto pCommandList = m_commandList.get();
+	ThrowIfFailed(pCommandList->Reset(m_commandAllocators[m_frameIndex], nullptr));
 
 	static auto isFirstFrame = true;
 	if (isFirstFrame || m_updateImage)
 	{
-		m_superResolution->ImageToTensors(m_commandList);
-		m_superResolution->Process(m_commandList, m_mlCommandRecorder);
+		m_superResolution->ImageToTensors(pCommandList);
+		m_superResolution->Process(pCommandList, m_mlCommandRecorder.get());
 		isFirstFrame = false;
 	}
-	m_superResolution->Render(m_commandList, m_renderTargets[m_frameIndex]);
+	m_superResolution->Render(pCommandList, *m_renderTargets[m_frameIndex]);
 
 	ResourceBarrier barrier;
-	const auto numBarriers = m_renderTargets[m_frameIndex].SetBarrier(&barrier, ResourceState::PRESENT);
-	m_commandList.Barrier(numBarriers, &barrier);
+	const auto numBarriers = m_renderTargets[m_frameIndex]->SetBarrier(&barrier, ResourceState::PRESENT);
+	pCommandList->Barrier(numBarriers, &barrier);
 
-	ThrowIfFailed(m_commandList.Close());
+	ThrowIfFailed(pCommandList->Close());
 }
 
 // Wait for pending GPU work to complete.

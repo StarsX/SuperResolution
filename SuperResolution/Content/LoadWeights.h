@@ -8,6 +8,6 @@
 
 #pragma once
 
-#include "MachineLearning/XUSGMachineLearningUtil.h"
+#include "MachineLearning/XUSGMachineLearning.h"
 
 bool LoadWeights(const std::string& fpath, XUSG::ML::WeightMapType& weightMap);

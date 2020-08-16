@@ -19,6 +19,8 @@
 #define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers.
 #endif
 
+#define DLL_INTERFACE __declspec(dllimport)
+
 #include <windows.h>
 
 #include <DirectML.h>					// The DirectML header from the Windows SDK.
@@ -36,6 +38,7 @@
 #include <algorithm>
 #include <string>
 #include <vector>
+#include <map>
 #include <unordered_map>
 #include <functional>
 #include <wrl.h>

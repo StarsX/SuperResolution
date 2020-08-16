@@ -45,14 +45,14 @@ private:
 	XUSG::CommandAllocator	m_commandAllocators[FrameCount];
 	XUSG::CommandQueue		m_commandQueue;
 
-	XUSG::Device			m_device;
-	XUSG::RenderTarget		m_renderTargets[FrameCount];
-	XUSG::CommandList		m_commandList;
+	XUSG::Device				m_device;
+	XUSG::RenderTarget::uptr	m_renderTargets[FrameCount];
+	XUSG::CommandList::uptr		m_commandList;
 
 	// DML
 	std::unique_ptr<SuperResolution> m_superResolution;
-	XUSG::ML::Device	m_mlDevice;
-	XUSG::ML::CommandRecorder m_mlCommandRecorder;
+	XUSG::ML::Device m_mlDevice;
+	XUSG::ML::CommandRecorder::uptr m_mlCommandRecorder;
 
 	uint32_t	m_vendorId;
 
