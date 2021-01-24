@@ -95,17 +95,18 @@ void SuperResolution::Process(CommandList* pCommandList, const CommandRecorder* 
 	// Run the intermediate model steps: 3 convolutions (with premultiplied batch normalization
 	// baked into the weights), an upsample, 3 convolutions w/ premultiplied batch norm, 1 final convolution.
 	// This generates a residual image.
+	const auto nullUavBarrier = ResourceBarrier::UAV(nullptr);
 	for (auto i = 0u; i < c_numConvLayers; ++i)
 	{
 		// Convolution
 		pCommandRecorder->Dispatch(pCommandList, m_convOps[i]->GetDispatchable(), m_convBindings[i]->GetDispatchableBindingTable());
-		pCommandList->Barrier(1, &ResourceBarrier::UAV(nullptr));
+		pCommandList->Barrier(1, &nullUavBarrier);
 
 		if (i == 2)
 		{
 			// Intermediate upsample
 			pCommandRecorder->Dispatch(pCommandList, m_upsampleOps[1]->GetDispatchable(), m_upsampleBindings[1]->GetDispatchableBindingTable());
-			pCommandList->Barrier(1, &ResourceBarrier::UAV(nullptr));
+			pCommandList->Barrier(1, &nullUavBarrier);
 		}
 	}
 
