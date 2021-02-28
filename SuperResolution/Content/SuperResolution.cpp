@@ -95,18 +95,18 @@ void SuperResolution::Process(CommandList* pCommandList, const CommandRecorder* 
 	// Run the intermediate model steps: 3 convolutions (with premultiplied batch normalization
 	// baked into the weights), an upsample, 3 convolutions w/ premultiplied batch norm, 1 final convolution.
 	// This generates a residual image.
-	const auto nullUavBarrier = ResourceBarrier::UAV(nullptr);
+	const auto allUavBarrier = ResourceBarrier::UAV(nullptr);
 	for (auto i = 0u; i < c_numConvLayers; ++i)
 	{
 		// Convolution
 		pCommandRecorder->Dispatch(pCommandList, m_convOps[i]->GetDispatchable(), m_convBindings[i]->GetDispatchableBindingTable());
-		pCommandList->Barrier(1, &nullUavBarrier);
+		pCommandList->Barrier(1, &allUavBarrier);
 
 		if (i == 2)
 		{
 			// Intermediate upsample
 			pCommandRecorder->Dispatch(pCommandList, m_upsampleOps[1]->GetDispatchable(), m_upsampleBindings[1]->GetDispatchableBindingTable());
-			pCommandList->Barrier(1, &nullUavBarrier);
+			pCommandList->Barrier(1, &allUavBarrier);
 		}
 	}
 
@@ -380,8 +380,8 @@ bool SuperResolution::createPipelineLayouts()
 	{
 		const auto pipelineLayout = XUSG::Util::PipelineLayout::MakeUnique();
 		pipelineLayout->SetRange(0, DescriptorType::CONSTANT, SizeOfInUint32(ImageLayout), 0);
-		pipelineLayout->SetRange(1, DescriptorType::UAV, 1, 0,
-			0, DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE);
+		pipelineLayout->SetRange(1, DescriptorType::UAV, 1, 0, 0,
+			DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE | DescriptorFlag::DESCRIPTORS_VOLATILE);
 		pipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0,
 			0, DescriptorFlag::DATA_STATIC);
 		X_RETURN(m_pipelineLayouts[0], pipelineLayout->GetPipelineLayout(*m_pipelineLayoutCache,
@@ -396,7 +396,7 @@ bool SuperResolution::createPipelineLayouts()
 	{
 		const auto pipelineLayout = XUSG::Util::PipelineLayout::MakeUnique();
 		pipelineLayout->SetRange(0, DescriptorType::CONSTANT, SizeOfInUint32(ImageLayout), 0);
-		pipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0);
+		pipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0, 0, DescriptorFlag::DESCRIPTORS_VOLATILE);
 		pipelineLayout->SetShaderStage(0, Shader::Stage::PS);
 		pipelineLayout->SetShaderStage(1, Shader::Stage::PS);
 		X_RETURN(m_pipelineLayouts[1], pipelineLayout->GetPipelineLayout(*m_pipelineLayoutCache,
