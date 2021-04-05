@@ -93,7 +93,7 @@ void SuperResolutionX::LoadPipeline(vector<Resource>& uploaders)
 	ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
 
 	// Create a command allocator for each frame.
-	for (auto n = 0u; n < FrameCount; ++n)
+	for (uint8_t n = 0; n < FrameCount; ++n)
 		N_RETURN(m_device->GetCommandAllocator(m_commandAllocators[n], CommandListType::DIRECT), ThrowIfFailed(E_FAIL));
 
 	// Create the command list.
@@ -141,7 +141,7 @@ void SuperResolutionX::LoadPipeline(vector<Resource>& uploaders)
 
 	// Create frame resources.
 	// Create a RTV for each frame.
-	for (auto n = 0u; n < FrameCount; ++n)
+	for (uint8_t n = 0; n < FrameCount; ++n)
 	{
 		m_renderTargets[n] = RenderTarget::MakeUnique();
 		N_RETURN(m_renderTargets[n]->CreateFromSwapChain(m_device, m_swapChain, n), ThrowIfFailed(E_FAIL));
