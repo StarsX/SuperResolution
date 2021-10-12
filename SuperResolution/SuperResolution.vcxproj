@@ -102,9 +102,7 @@ COPY /Y "$(ProjectDir)XUSG\Bin\$(Platform)\$(Configuration)\*.dll" "$(ProjectDir
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="XUSG\Advanced\XUSGDDSLoader.h" />
     <ClInclude Include="XUSG\Core\XUSG.h" />
-    <ClInclude Include="XUSG\Core\XUSG_DX12.h" />
     <ClInclude Include="XUSG\MachineLearning\XUSGMachineLearning.h" />
-    <ClInclude Include="XUSG\MachineLearning\XUSGMachineLearning_DML.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Common\DXFramework.cpp">

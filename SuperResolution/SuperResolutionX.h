@@ -41,17 +41,17 @@ public:
 private:
 	static const uint8_t FrameCount = 3;
 
-	XUSG::SwapChain			m_swapChain;
-	XUSG::CommandAllocator	m_commandAllocators[FrameCount];
-	XUSG::CommandQueue		m_commandQueue;
+	XUSG::SwapChain::uptr			m_swapChain;
+	XUSG::CommandAllocator::uptr	m_commandAllocators[FrameCount];
+	XUSG::CommandQueue::uptr		m_commandQueue;
 
-	XUSG::Device				m_device;
-	XUSG::RenderTarget::uptr	m_renderTargets[FrameCount];
-	XUSG::CommandList::uptr		m_commandList;
+	XUSG::Device::sptr				m_device;
+	XUSG::RenderTarget::uptr		m_renderTargets[FrameCount];
+	XUSG::CommandList::uptr			m_commandList;
 
 	// DML
 	std::unique_ptr<SuperResolution> m_superResolution;
-	XUSG::ML::Device m_mlDevice;
+	XUSG::ML::Device::sptr m_mlDevice;
 	XUSG::ML::CommandRecorder::uptr m_mlCommandRecorder;
 
 	uint32_t	m_vendorId;
@@ -59,7 +59,7 @@ private:
 	// Synchronization objects.
 	uint32_t	m_frameIndex;
 	HANDLE		m_fenceEvent;
-	XUSG::Fence	m_fence;
+	XUSG::Fence::uptr m_fence;
 	uint64_t	m_fenceValues[FrameCount];
 
 	// Application state
@@ -71,9 +71,9 @@ private:
 	// User external settings
 	std::wstring m_fileName;
 
-	void LoadPipeline(std::vector<XUSG::Resource>& uploaders);
+	void LoadPipeline(std::vector<XUSG::Resource::uptr>& uploaders);
 	void LoadAssets();
-	bool InitTensors(std::vector<XUSG::Resource>& uploaders);
+	bool InitTensors(std::vector<XUSG::Resource::uptr>& uploaders);
 
 	void PopulateCommandList();
 	void WaitForGpu();

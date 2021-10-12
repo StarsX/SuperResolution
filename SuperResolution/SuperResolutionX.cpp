@@ -41,13 +41,13 @@ SuperResolutionX::~SuperResolutionX()
 
 void SuperResolutionX::OnInit()
 {
-	vector<Resource> uploaders(0);
+	vector<Resource::uptr> uploaders(0);
 	LoadPipeline(uploaders);
 	LoadAssets();
 }
 
 // Load the rendering pipeline dependencies.
-void SuperResolutionX::LoadPipeline(vector<Resource>& uploaders)
+void SuperResolutionX::LoadPipeline(vector<Resource::uptr>& uploaders)
 {
 	auto dxgiFactoryFlags = 0u;
 
@@ -77,7 +77,9 @@ void SuperResolutionX::LoadPipeline(vector<Resource>& uploaders)
 	{
 		dxgiAdapter = nullptr;
 		ThrowIfFailed(factory->EnumAdapters1(i, &dxgiAdapter));
-		hr = D3D12CreateDevice(dxgiAdapter.get(), D3D_FEATURE_LEVEL_11_0, IID_PPV_ARGS(&m_device));
+
+		m_device = XUSG::Device::MakeShared();
+		hr = m_device->Create(dxgiAdapter.get(), D3D_FEATURE_LEVEL_11_0);
 	}
 
 	dxgiAdapter->GetDesc1(&dxgiAdapterDesc);
@@ -87,18 +89,26 @@ void SuperResolutionX::LoadPipeline(vector<Resource>& uploaders)
 	ThrowIfFailed(hr);
 
 	// Create the command queue.
-	N_RETURN(m_device->GetCommandQueue(m_commandQueue, CommandListType::DIRECT, CommandQueueFlag::NONE), ThrowIfFailed(E_FAIL));
+	m_commandQueue = CommandQueue::MakeUnique();
+	N_RETURN(m_commandQueue->Create(m_device.get(), CommandListType::DIRECT, CommandQueueFlag::NONE,
+		0, 0, L"CommandQueue"), ThrowIfFailed(E_FAIL));
 
 	// This sample does not support fullscreen transitions.
 	ThrowIfFailed(factory->MakeWindowAssociation(Win32Application::GetHwnd(), DXGI_MWA_NO_ALT_ENTER));
 
 	// Create a command allocator for each frame.
 	for (uint8_t n = 0; n < FrameCount; ++n)
-		N_RETURN(m_device->GetCommandAllocator(m_commandAllocators[n], CommandListType::DIRECT), ThrowIfFailed(E_FAIL));
+	{
+		m_commandAllocators[n] = CommandAllocator::MakeUnique();
+		N_RETURN(m_commandAllocators[n]->Create(m_device.get(), CommandListType::DIRECT,
+			(L"CommandAllocator" + to_wstring(n)).c_str()), ThrowIfFailed(E_FAIL));
+	}
 
 	// Create the command list.
 	m_commandList = CommandList::MakeUnique();
-	N_RETURN(m_device->GetCommandList(*m_commandList, 0, CommandListType::DIRECT, m_commandAllocators[0], nullptr), ThrowIfFailed(E_FAIL));
+	const auto pCommandList = m_commandList.get();
+	N_RETURN(pCommandList->Create(m_device.get(), 0, CommandListType::DIRECT,
+		m_commandAllocators[m_frameIndex].get(), nullptr), ThrowIfFailed(E_FAIL));
 
 	N_RETURN(InitTensors(uploaders), ThrowIfFailed(E_FAIL));
 	m_width = m_superResolution->GetOutWidth();
@@ -117,26 +127,10 @@ void SuperResolutionX::LoadPipeline(vector<Resource>& uploaders)
 	}
 
 	// Describe and create the swap chain.
-	DXGI_SWAP_CHAIN_DESC1 swapChainDesc = {};
-	swapChainDesc.BufferCount = FrameCount;
-	swapChainDesc.Width = m_width;
-	swapChainDesc.Height = m_height;
-	swapChainDesc.Format = GetDXGIFormat(Format::R8G8B8A8_UNORM);
-	swapChainDesc.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
-	swapChainDesc.SwapEffect = DXGI_SWAP_EFFECT_FLIP_DISCARD;
-	swapChainDesc.SampleDesc.Count = 1;
+	m_swapChain = SwapChain::MakeUnique();
+	N_RETURN(m_swapChain->Create(factory.get(), Win32Application::GetHwnd(), m_commandQueue.get(),
+		FrameCount, m_width, m_height, Format::R8G8B8A8_UNORM), ThrowIfFailed(E_FAIL));
 
-	com_ptr<IDXGISwapChain1> swapChain;
-	ThrowIfFailed(factory->CreateSwapChainForHwnd(
-		m_commandQueue.get(),		// Swap chain needs the queue so that it can force a flush on it.
-		Win32Application::GetHwnd(),
-		&swapChainDesc,
-		nullptr,
-		nullptr,
-		&swapChain
-	));
-
-	ThrowIfFailed(swapChain->QueryInterface(IID_PPV_ARGS(&m_swapChain)));
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
 
 	// Create frame resources.
@@ -144,7 +138,7 @@ void SuperResolutionX::LoadPipeline(vector<Resource>& uploaders)
 	for (uint8_t n = 0; n < FrameCount; ++n)
 	{
 		m_renderTargets[n] = RenderTarget::MakeUnique();
-		N_RETURN(m_renderTargets[n]->CreateFromSwapChain(m_device, m_swapChain, n), ThrowIfFailed(E_FAIL));
+		N_RETURN(m_renderTargets[n]->CreateFromSwapChain(m_device.get(), m_swapChain.get(), n), ThrowIfFailed(E_FAIL));
 	}
 }
 
@@ -152,13 +146,16 @@ void SuperResolutionX::LoadPipeline(vector<Resource>& uploaders)
 void SuperResolutionX::LoadAssets()
 {
 	// Close the command list and execute it to begin the initial GPU setup.
-	const auto pCommandList = m_commandList.get();
-	ThrowIfFailed(pCommandList->Close());
-	m_commandQueue->SubmitCommandList(pCommandList);
+	N_RETURN(m_commandList->Close(), ThrowIfFailed(E_FAIL));
+	m_commandQueue->ExecuteCommandList(m_commandList.get());
 
 	// Create synchronization objects and wait until assets have been uploaded to the GPU.
 	{
-		if (!m_fence) N_RETURN(m_device->GetFence(m_fence, m_fenceValues[m_frameIndex]++, FenceFlag::NONE), ThrowIfFailed(E_FAIL));
+		if (!m_fence)
+		{
+			m_fence = Fence::MakeUnique();
+			N_RETURN(m_fence->Create(m_device.get(), m_fenceValues[m_frameIndex]++, FenceFlag::NONE, L"Fence"), ThrowIfFailed(E_FAIL));
+		}
 
 		// Create an event handle to use for frame synchronization.
 		m_fenceEvent = CreateEvent(nullptr, FALSE, FALSE, nullptr);
@@ -171,24 +168,32 @@ void SuperResolutionX::LoadAssets()
 	}
 }
 
-bool SuperResolutionX::InitTensors(vector<Resource>& uploaders)
+bool SuperResolutionX::InitTensors(vector<Resource::uptr>& uploaders)
 {
-	DML_CREATE_DEVICE_FLAGS dmlCreateDeviceFlags = DML_CREATE_DEVICE_FLAG_NONE;
+	CreateDeviceFlag createDeviceFlags = CreateDeviceFlag::NONE;
 
 #if defined (_DEBUG)
 	// If the project is in a debug build, then enable debugging via DirectML debug layers with this flag.
-	dmlCreateDeviceFlags |= DML_CREATE_DEVICE_FLAG_DEBUG;
+	createDeviceFlags |= CreateDeviceFlag::DEBUG;
 #endif
 
-	ThrowIfFailed(DMLCreateDevice(m_device.get(), dmlCreateDeviceFlags, IID_PPV_ARGS(&m_mlDevice)));
+	m_mlDevice = ML::Device::MakeShared();
+	N_RETURN(m_mlDevice->Create(m_device.get(), createDeviceFlags), false);
+
+	DML_FEATURE_QUERY_TENSOR_DATA_TYPE_SUPPORT fp16Query = { DML_TENSOR_DATA_TYPE_FLOAT16 };
+	DML_FEATURE_DATA_TENSOR_DATA_TYPE_SUPPORT fp16Supported = {};
+	const auto pDevice = static_cast<IDMLDevice*>(m_mlDevice->GetHandle());
+	const auto hr = pDevice->CheckFeatureSupport(DML_FEATURE_TENSOR_DATA_TYPE_SUPPORT, sizeof(fp16Query),
+		&fp16Query, sizeof(fp16Supported), &fp16Supported);
 
 	// The command recorder is a stateless object that records Dispatches into an existing Direct3D 12 command list.
 	m_mlCommandRecorder = CommandRecorder::MakeUnique();
-	N_RETURN(m_mlDevice->GetCommandRecorder(*m_mlCommandRecorder), false);
+	N_RETURN(m_mlDevice->GetCommandRecorder(m_mlCommandRecorder.get()), false);
 
 	X_RETURN(m_superResolution, make_unique<SuperResolution>(m_device, m_mlDevice), false);
 
-	return m_superResolution->Init(m_commandList.get(), m_mlCommandRecorder.get(), m_vendorId, uploaders, m_fileName.c_str());
+	return m_superResolution->Init(m_commandList.get(), m_mlCommandRecorder.get(),
+		m_vendorId, uploaders, m_fileName.c_str(), fp16Supported.IsSupported);
 }
 
 // Update frame-based values.
@@ -263,13 +268,14 @@ void SuperResolutionX::PopulateCommandList()
 	// Command list allocators can only be reset when the associated 
 	// command lists have finished execution on the GPU; apps should use 
 	// fences to determine GPU execution progress.
-	ThrowIfFailed(m_commandAllocators[m_frameIndex]->Reset());
+	const auto pCommandAllocator = m_commandAllocators[m_frameIndex].get();
+	N_RETURN(pCommandAllocator->Reset(), ThrowIfFailed(E_FAIL));
 
 	// However, when ExecuteCommandList() is called on a particular command 
 	// list, that command list can then be reset at any time and must be before 
 	// re-recording.
 	const auto pCommandList = m_commandList.get();
-	ThrowIfFailed(pCommandList->Reset(m_commandAllocators[m_frameIndex], nullptr));
+	N_RETURN(pCommandList->Reset(pCommandAllocator, nullptr), ThrowIfFailed(E_FAIL));
 
 	static auto isFirstFrame = true;
 	if (isFirstFrame || m_updateImage)
@@ -284,18 +290,18 @@ void SuperResolutionX::PopulateCommandList()
 	const auto numBarriers = m_renderTargets[m_frameIndex]->SetBarrier(&barrier, ResourceState::PRESENT);
 	pCommandList->Barrier(numBarriers, &barrier);
 
-	ThrowIfFailed(pCommandList->Close());
+	N_RETURN(pCommandList->Close(), ThrowIfFailed(E_FAIL));
 }
 
 // Wait for pending GPU work to complete.
 void SuperResolutionX::WaitForGpu()
 {
 	// Schedule a Signal command in the queue.
-	ThrowIfFailed(m_commandQueue->Signal(m_fence.get(), m_fenceValues[m_frameIndex]));
+	N_RETURN(m_commandQueue->Signal(m_fence.get(), m_fenceValues[m_frameIndex]), ThrowIfFailed(E_FAIL));
 
 	// Wait until the fence has been processed.
-	ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
-	WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+	N_RETURN(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent), ThrowIfFailed(E_FAIL));
+	WaitForSingleObject(m_fenceEvent, INFINITE);
 
 	// Increment the fence value for the current frame.
 	m_fenceValues[m_frameIndex]++;
@@ -306,7 +312,7 @@ void SuperResolutionX::MoveToNextFrame()
 {
 	// Schedule a Signal command in the queue.
 	const auto currentFenceValue = m_fenceValues[m_frameIndex];
-	ThrowIfFailed(m_commandQueue->Signal(m_fence.get(), currentFenceValue));
+	N_RETURN(m_commandQueue->Signal(m_fence.get(), currentFenceValue), ThrowIfFailed(E_FAIL));
 
 	// Update the frame index.
 	m_frameIndex = m_swapChain->GetCurrentBackBufferIndex();
@@ -314,8 +320,8 @@ void SuperResolutionX::MoveToNextFrame()
 	// If the next frame is not ready to be rendered yet, wait until it is ready.
 	if (m_fence->GetCompletedValue() < m_fenceValues[m_frameIndex])
 	{
-		ThrowIfFailed(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent));
-		WaitForSingleObjectEx(m_fenceEvent, INFINITE, FALSE);
+		N_RETURN(m_fence->SetEventOnCompletion(m_fenceValues[m_frameIndex], m_fenceEvent), ThrowIfFailed(E_FAIL));
+		WaitForSingleObject(m_fenceEvent, INFINITE);
 	}
 
 	// Set the fence value for the next frame.

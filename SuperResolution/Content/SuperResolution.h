@@ -10,11 +10,12 @@
 class SuperResolution
 {
 public:
-	SuperResolution(const XUSG::Device& device, const XUSG::ML::Device& mlDevice);
+	SuperResolution(const XUSG::Device::sptr& device, const XUSG::ML::Device::sptr& mlDevice);
 	virtual ~SuperResolution();
 
 	bool Init(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder,
-		uint32_t vendorId, std::vector<XUSG::Resource>& uploaders, const wchar_t* fileName);
+		uint32_t vendorId, std::vector<XUSG::Resource::uptr>& uploaders, const wchar_t* fileName,
+		bool isFP16Supported = false);
 
 	void ImageToTensors(const XUSG::CommandList* pCommandList);
 	void Process(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder);
@@ -47,10 +48,10 @@ protected:
 	};
 
 	bool createResources(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder,
-		uint32_t vendorId, std::vector<XUSG::Resource>& uploaders);
+		uint32_t vendorId, std::vector<XUSG::Resource::uptr>& uploaders, bool isFP16Supported);
 	bool createWeightTensors(XUSG::CommandList* pCommandList, XUSG::ML::WeightMapType& weights,
 		const char* convLayerName, const char* scaleLayerName, const char* shiftLayerName,
-		const uint32_t filterSizes[4], std::vector<XUSG::Resource>& uploaders,
+		const uint32_t filterSizes[4], std::vector<XUSG::Resource::uptr>& uploaders,
 		XUSG::RawBuffer::uptr& filterWeightBuffer, XUSG::RawBuffer::uptr& biasWeightBuffer);
 	bool createWeightResource(const uint32_t tensorSizes[4], XUSG::RawBuffer::uptr& resourceOut);
 	bool createPipelineLayouts();
@@ -58,8 +59,8 @@ protected:
 	bool createDescriptorTables();
 	bool initResources(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder);
 	
-	XUSG::Device		m_device;
-	XUSG::ML::Device	m_mlDevice;
+	XUSG::Device::sptr		m_device;
+	XUSG::ML::Device::sptr	m_mlDevice;
 
 	XUSG::ShaderPool::uptr				m_shaderPool;
 	XUSG::PipelineLayoutCache::uptr		m_pipelineLayoutCache;
@@ -73,7 +74,7 @@ protected:
 	static const size_t	c_numIntermediateBuffers = 2;
 
 	// Resources
-	std::shared_ptr<XUSG::ResourceBase> m_inputImage;
+	XUSG::ShaderResource::sptr m_inputImage;
 	XUSG::TypedBuffer::uptr	m_modelInput;
 	XUSG::TypedBuffer::uptr	m_modelOutput;
 

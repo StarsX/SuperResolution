@@ -25,17 +25,8 @@
     <Filter Include="Common\Source Files">
       <UniqueIdentifier>{8612a9fa-d93e-4759-a14e-067144cfb445}</UniqueIdentifier>
     </Filter>
-    <Filter Include="XUSG\Core">
-      <UniqueIdentifier>{fce9b0a2-0f96-4729-94ea-acaa2ddf3967}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="XUSG\MachineLearning">
-      <UniqueIdentifier>{a6b02b24-23a2-4876-9f58-f39159e11280}</UniqueIdentifier>
-    </Filter>
     <Filter Include="Shaders">
       <UniqueIdentifier>{0c90fa8b-4f2a-4dae-960c-a7f0087de171}</UniqueIdentifier>
-    </Filter>
-    <Filter Include="XUSG\Advanced">
-      <UniqueIdentifier>{6345d945-b140-4fec-ae3f-2ac000d1756d}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -76,19 +67,13 @@
       <Filter>Common\Header Files</Filter>
     </ClInclude>
     <ClInclude Include="XUSG\Advanced\XUSGDDSLoader.h">
-      <Filter>XUSG\Advanced</Filter>
+      <Filter>XUSG</Filter>
     </ClInclude>
     <ClInclude Include="XUSG\Core\XUSG.h">
-      <Filter>XUSG\Core</Filter>
-    </ClInclude>
-    <ClInclude Include="XUSG\Core\XUSG_DX12.h">
-      <Filter>XUSG\Core</Filter>
+      <Filter>XUSG</Filter>
     </ClInclude>
     <ClInclude Include="XUSG\MachineLearning\XUSGMachineLearning.h">
-      <Filter>XUSG\MachineLearning</Filter>
-    </ClInclude>
-    <ClInclude Include="XUSG\MachineLearning\XUSGMachineLearning_DML.h">
-      <Filter>XUSG\MachineLearning</Filter>
+      <Filter>XUSG</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
