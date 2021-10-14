@@ -109,7 +109,7 @@ namespace XUSG
 		enum class TensorFlag
 		{
 			NONE,
-			MANAGED,
+			MANAGED
 		};
 
 		DEFINE_ENUM_FLAG_OPERATORS(TensorFlag);
@@ -119,7 +119,7 @@ namespace XUSG
 			NONE,
 			ALLOW_HALF_PRECISION_COMPUTATION,
 			DISABLE_META_COMMANDS,
-			DESCRIPTORS_VOLATILE,
+			DESCRIPTORS_VOLATILE
 		};
 
 		DEFINE_ENUM_FLAG_OPERATORS(ExecutionFlag);
@@ -193,14 +193,20 @@ namespace XUSG
 			float Bias;
 		};
 
+		//--------------------------------------------------------------------------------------
+		// Typed operators
+		//--------------------------------------------------------------------------------------
+
 		struct UnaryOp
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 		};
 
 		struct ElementWiseUnaryOp
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			const ScaleBias* pScaleBias;
@@ -208,6 +214,7 @@ namespace XUSG
 
 		struct ElementWiseBinaryOp
 		{
+			OperatorType Type;
 			const Tensor* pA;
 			const Tensor* pB;
 			const Tensor* pOutput;
@@ -223,6 +230,7 @@ namespace XUSG
 
 		struct ElementWiseClip
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			const ScaleBias* pScaleBias;
@@ -249,6 +257,7 @@ namespace XUSG
 
 		struct ElementWisePow
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pExponent;
 			const Tensor* pOutput;
@@ -257,6 +266,7 @@ namespace XUSG
 
 		struct ElementWiseConstantPow
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			const ScaleBias* pScaleBias;
@@ -271,6 +281,7 @@ namespace XUSG
 
 		struct ElementWiseThreshold
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			const ScaleBias* pScaleBias;
@@ -279,6 +290,7 @@ namespace XUSG
 
 		struct ElementWiseQuantizeLinear
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pScale;
 			const Tensor* pZeroPoint;
@@ -289,6 +301,7 @@ namespace XUSG
 
 		struct ActivationELU
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			float Alpha;
@@ -298,6 +311,7 @@ namespace XUSG
 
 		struct ActivationHardSigmoid
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			float Alpha;
@@ -311,6 +325,7 @@ namespace XUSG
 
 		struct ActivationParameterizedRELU
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pSlope;
 			const Tensor* pOutput;
@@ -321,6 +336,7 @@ namespace XUSG
 
 		struct ActivationScaledELU
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			float Alpha;
@@ -333,6 +349,7 @@ namespace XUSG
 
 		struct ActivationSoftplus
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			float Steepness;
@@ -344,6 +361,7 @@ namespace XUSG
 
 		struct ConvolutionOperator
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pFilter;
 			const Tensor* pBias;
@@ -357,12 +375,12 @@ namespace XUSG
 			const uint32_t* pEndPadding;
 			const uint32_t* pOutputPadding;
 			uint32_t GroupCount;
-			OperatorType FusedActivationType;
 			const void* pFusedActivation;
 		};
 
 		struct GEMMOperator
 		{
+			OperatorType Type;
 			const Tensor* pA;
 			const Tensor* pB;
 			const Tensor* pC;
@@ -371,12 +389,12 @@ namespace XUSG
 			MatrixTransform TransB;
 			float Alpha;
 			float Beta;
-			OperatorType FusedActivationType;
 			const void* pFusedActivation;
 		};
 
 		struct ReduceOperator
 		{
+			OperatorType Type;
 			ReduceFunction Function;
 			const Tensor* pInput;
 			const Tensor* pOutput;
@@ -386,6 +404,7 @@ namespace XUSG
 
 		struct AveragePooling
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			uint32_t DimensionCount;
@@ -398,6 +417,7 @@ namespace XUSG
 
 		struct LPPooling
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			uint32_t DimensionCount;
@@ -410,6 +430,7 @@ namespace XUSG
 
 		struct MaxPooling
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			uint32_t DimensionCount;
@@ -421,6 +442,7 @@ namespace XUSG
 
 		struct ROIPooling
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pROI;
 			const Tensor* pOutput;
@@ -431,6 +453,7 @@ namespace XUSG
 
 		struct SliceOperator
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			uint32_t DimensionCount;
@@ -443,6 +466,7 @@ namespace XUSG
 
 		struct SplitOperator
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			uint32_t OutputCount;
 			const Tensor* pOutputs;
@@ -451,6 +475,7 @@ namespace XUSG
 
 		struct JoinOperator
 		{
+			OperatorType Type;
 			uint32_t InputCount;
 			const Tensor* pInputs;
 			const Tensor* pOutput;
@@ -459,6 +484,7 @@ namespace XUSG
 
 		struct PaddingOperator
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			PaddingType PaddingMode;
@@ -470,6 +496,7 @@ namespace XUSG
 
 		struct ValueScale2D
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			float Scale;
@@ -479,11 +506,100 @@ namespace XUSG
 
 		struct Upsample2D
 		{
+			OperatorType Type;
 			const Tensor* pInput;
 			const Tensor* pOutput;
 			uint32_t ScaleWidth;
 			uint32_t ScaleHeight;
 			InterpolationType InterpolationMode;
+		};
+
+		struct GatherOperator
+		{
+			OperatorType Type;
+			const Tensor* pInput;
+			const Tensor* pIndices;
+			const Tensor* pOutput;
+			uint32_t Axis;
+			uint32_t IndexDimensions;
+		};
+
+		struct SpaceToDepth
+		{
+			OperatorType Type;
+			const Tensor* pInput;
+			const Tensor* pOutput;
+			uint32_t BlockSize;
+		};
+
+		using DepthToSpace = SpaceToDepth;
+
+		struct TileOperator
+		{
+			OperatorType Type;
+			const Tensor* pInput;
+			const Tensor* pOutput;
+			uint32_t RepeatsCount;
+			const uint32_t* pRepeats;
+		};
+
+		struct TopKOperator
+		{
+			OperatorType Type;
+			const Tensor* pInput;
+			const Tensor* pOutputValue;
+			const Tensor* pOutputIndex;
+			uint32_t Axis;
+			uint32_t K;
+		};
+
+		struct BatchNormalization
+		{
+			OperatorType Type;
+			const Tensor* pInput;
+			const Tensor* pMean;
+			const Tensor* pVariance;
+			const Tensor* pScale;
+			const Tensor* pBias;
+			const Tensor* pOutput;
+			bool Spatial;
+			float Epsilon;
+			const void* pFusedActivation;
+		};
+
+		struct MeanVarianceNormalization
+		{
+			OperatorType Type;
+			const Tensor* pInput;
+			const Tensor* pScale;
+			const Tensor* pBias;
+			const Tensor* pOutput;
+			bool CrossChannel;
+			bool NormalizeVariance;
+			float Epsilon;
+			const void* pFusedActivation;
+		};
+
+		struct LocalResponseNormalization
+		{
+			OperatorType Type;
+			const Tensor* pInput;
+			const Tensor* pOutput;
+			bool CrossChannel;
+			uint32_t LocalSize;
+			float Alpha;
+			float Beta;
+			float Bias;
+		};
+
+		struct LPNormalization
+		{
+			OperatorType Type;
+			const Tensor* pInput;
+			const Tensor* pOutput;
+			uint32_t Axis;
+			float Epsilon;
+			uint32_t P;
 		};
 
 		//--------------------------------------------------------------------------------------
@@ -543,7 +659,7 @@ namespace XUSG
 			//Operator();
 			virtual ~Operator() {}
 
-			virtual bool Create(const Device* pDevice, OperatorType type, const void* pTypedOp,
+			virtual bool Create(const Device* pDevice, const void* pTypedOp,
 				ExecutionFlag flags = ExecutionFlag::NONE) = 0;
 
 			virtual Dispatchable GetDispatchable() const = 0;
