@@ -17,7 +17,7 @@ public:
 		uint32_t vendorId, std::vector<XUSG::Resource::uptr>& uploaders, const wchar_t* fileName,
 		bool isFP16Supported = false);
 
-	void ImageToTensors(const XUSG::CommandList* pCommandList);
+	void ImageToTensors(XUSG::CommandList* pCommandList);
 	void Process(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder);
 	void Render(XUSG::CommandList* pCommandList, XUSG::RenderTarget& renderTarget);
 
@@ -74,7 +74,7 @@ protected:
 	static const size_t	c_numIntermediateBuffers = 2;
 
 	// Resources
-	XUSG::ShaderResource::sptr m_inputImage;
+	XUSG::Texture::sptr		m_inputImage;
 	XUSG::TypedBuffer::uptr	m_modelInput;
 	XUSG::TypedBuffer::uptr	m_modelOutput;
 

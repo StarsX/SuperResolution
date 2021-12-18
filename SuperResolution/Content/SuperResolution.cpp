@@ -61,7 +61,7 @@ bool SuperResolution::Init(CommandList* pCommandList, const CommandRecorder* pCo
 	return true;
 }
 
-void SuperResolution::ImageToTensors(const CommandList* pCommandList)
+void SuperResolution::ImageToTensors(CommandList* pCommandList)
 {
 	const DescriptorPool descriptorPools[] = { m_descriptorTableCache->GetDescriptorPool(CBV_SRV_UAV_POOL, GRAPHICS_POOL) };
 	pCommandList->SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
@@ -209,7 +209,7 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 
 		// Which intermediate resource to use as input for the current operation. The other will be
 		// used as output. Then the next op will swap the order.
-		auto inputIndex = 0ui8;
+		uint8_t inputIndex = 0;
 
 		filterSizes[0] = 64;	// output filters
 		filterSizes[1] = 32;	// input channels
@@ -306,7 +306,7 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 
 		// Create two resources for intermediate layer results. Each layer will ping-pong between these. They're each large
 		// enough to hold the largest intermediate result required.
-		for (auto i = 0ui8; i < 2; ++i)
+		for (uint8_t i = 0; i < 2; ++i)
 		{
 			m_modelIntermediateResult[i] = RawBuffer::MakeUnique();
 			N_RETURN(m_modelIntermediateResult[i]->Create(m_device.get(), intermediateBufferMaxSize[i],
