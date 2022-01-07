@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------------------------
-// By XU, Tianchen
+// Copyright (c) XU, Tianchen. All rights reserved.
 //--------------------------------------------------------------------------------------
 
 #pragma once
@@ -52,8 +52,8 @@ protected:
 	bool createWeightTensors(XUSG::CommandList* pCommandList, XUSG::ML::WeightMapType& weights,
 		const char* convLayerName, const char* scaleLayerName, const char* shiftLayerName,
 		const uint32_t filterSizes[4], std::vector<XUSG::Resource::uptr>& uploaders,
-		XUSG::RawBuffer::uptr& filterWeightBuffer, XUSG::RawBuffer::uptr& biasWeightBuffer);
-	bool createWeightResource(const uint32_t tensorSizes[4], XUSG::RawBuffer::uptr& resourceOut);
+		XUSG::Buffer::uptr& filterWeightBuffer, XUSG::Buffer::uptr& biasWeightBuffer);
+	bool createWeightResource(const uint32_t tensorSizes[4], XUSG::Buffer::uptr& resourceOut);
 	bool createPipelineLayouts();
 	bool createPipelines();
 	bool createDescriptorTables();
@@ -78,18 +78,18 @@ protected:
 	XUSG::TypedBuffer::uptr	m_modelInput;
 	XUSG::TypedBuffer::uptr	m_modelOutput;
 
-	XUSG::RawBuffer::uptr	m_modelIntermediateResult[c_numIntermediateBuffers];
-	XUSG::RawBuffer::uptr	m_modelConvFilterWeights[c_numConvLayers];
-	XUSG::RawBuffer::uptr	m_modelConvBiasWeights[c_numConvLayers];
+	XUSG::Buffer::uptr	m_modelIntermediateResult[c_numIntermediateBuffers];
+	XUSG::Buffer::uptr	m_modelConvFilterWeights[c_numConvLayers];
+	XUSG::Buffer::uptr	m_modelConvBiasWeights[c_numConvLayers];
 
-	XUSG::RawBuffer::uptr	m_modelUpsamplePersistentResources[c_numUpsampleLayers];
-	XUSG::RawBuffer::uptr	m_modelConvPersistentResources[c_numConvLayers];
-	XUSG::RawBuffer::uptr	m_modelAddPersistentResource;
+	XUSG::Buffer::uptr	m_modelUpsamplePersistentResources[c_numUpsampleLayers];
+	XUSG::Buffer::uptr	m_modelConvPersistentResources[c_numConvLayers];
+	XUSG::Buffer::uptr	m_modelAddPersistentResource;
 
-	XUSG::RawBuffer::uptr	m_modelInitTemporaryResources[NUM_OP];
-	XUSG::RawBuffer::uptr	m_modelUpsampleTemporaryResources[c_numUpsampleLayers];
-	XUSG::RawBuffer::uptr	m_modelConvTemporaryResources[c_numConvLayers];
-	XUSG::RawBuffer::uptr	m_modelAddTemporaryResource;
+	XUSG::Buffer::uptr	m_modelInitTemporaryResources[NUM_OP];
+	XUSG::Buffer::uptr	m_modelUpsampleTemporaryResources[c_numUpsampleLayers];
+	XUSG::Buffer::uptr	m_modelConvTemporaryResources[c_numConvLayers];
+	XUSG::Buffer::uptr	m_modelAddTemporaryResource;
 
 	XUSG::ML::TensorLayout m_tensorLayout;
 	XUSG::ML::TensorDataType m_tensorDataType;

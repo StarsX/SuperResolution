@@ -1,5 +1,5 @@
 //--------------------------------------------------------------------------------------
-// By XU, Tianchen
+// Copyright (c) XU, Tianchen. All rights reserved.
 //--------------------------------------------------------------------------------------
 
 #include "SuperResolution.h"
@@ -44,8 +44,8 @@ bool SuperResolution::Init(CommandList* pCommandList, const CommandRecorder* pCo
 			8192, false, m_inputImage, uploaders.back().get(), &alphaMode), false);
 	}
 
-	m_imageLayoutIn.Width = m_inputImage->GetWidth();
-	m_imageLayoutIn.Height = dynamic_pointer_cast<Texture2D, ShaderResource>(m_inputImage)->GetHeight();
+	m_imageLayoutIn.Width = static_cast<uint32_t>(m_inputImage->GetWidth());
+	m_imageLayoutIn.Height = m_inputImage->GetHeight();
 
 	N_RETURN(createResources(pCommandList, pCommandRecorder, vendorId, uploaders, isFP16Supported), false);
 	N_RETURN(initResources(pCommandList, pCommandRecorder), false);
@@ -308,7 +308,7 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 		// enough to hold the largest intermediate result required.
 		for (uint8_t i = 0; i < 2; ++i)
 		{
-			m_modelIntermediateResult[i] = RawBuffer::MakeUnique();
+			m_modelIntermediateResult[i] = Buffer::MakeUnique();
 			N_RETURN(m_modelIntermediateResult[i]->Create(m_device.get(), intermediateBufferMaxSize[i],
 				ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr, 0, nullptr,
 				MemoryFlag::NONE, (L"IntermediateResultBuffer" + to_wstring(i)).c_str()), false);
@@ -320,7 +320,7 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 
 bool SuperResolution::createWeightTensors(CommandList* pCommandList, WeightMapType& weights, const char* convLayerName,
 	const char* scaleLayerName, const char* shiftLayerName, const uint32_t filterSizes[4],
-	vector<Resource::uptr>& uploaders, RawBuffer::uptr& filterWeightBuffer, RawBuffer::uptr& biasWeightBuffer)
+	vector<Resource::uptr>& uploaders, Buffer::uptr& filterWeightBuffer, Buffer::uptr& biasWeightBuffer)
 {
 	const auto mlUtil = ML::Util::MakeUnique(m_mlDevice, m_tensorDataType, m_tensorLayout);
 	vector<uint8_t> filterWeights;
@@ -357,7 +357,7 @@ bool SuperResolution::createWeightTensors(CommandList* pCommandList, WeightMapTy
 	return true;
 }
 
-bool SuperResolution::createWeightResource(const uint32_t tensorSizes[4], RawBuffer::uptr& resourceOut)
+bool SuperResolution::createWeightResource(const uint32_t tensorSizes[4], Buffer::uptr& resourceOut)
 {
 	uint32_t strides[4];
 	ML::Util::GetStrides(tensorSizes, m_tensorLayout, strides);
@@ -365,7 +365,7 @@ bool SuperResolution::createWeightResource(const uint32_t tensorSizes[4], RawBuf
 	const auto tensor = Tensor::MakeUnique();
 	const auto bufferSize = tensor->Create(m_tensorDataType, static_cast<uint32_t>(size(strides)), tensorSizes, strides);
 
-	resourceOut = RawBuffer::MakeUnique();
+	resourceOut = Buffer::MakeUnique();
 
 	return resourceOut->Create(m_device.get(), bufferSize, ResourceFlag::ALLOW_UNORDERED_ACCESS,
 		MemoryType::DEFAULT, 0, nullptr, 0, nullptr, MemoryFlag::NONE, L"WeightBuffer");
@@ -507,7 +507,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 			const auto persistentResourceSize = m_upsampleOps[i]->GetPersistentResourceSize();
 			if (persistentResourceSize > 0)
 			{
-				m_modelUpsamplePersistentResources[i] = RawBuffer::MakeUnique();
+				m_modelUpsamplePersistentResources[i] = Buffer::MakeUnique();
 				N_RETURN(m_modelUpsamplePersistentResources[i]->Create(m_device.get(), persistentResourceSize,
 					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr, 0, nullptr,
 					MemoryFlag::NONE, (L"UpSamplePersistent" + to_wstring(i)).c_str()), false);
@@ -519,7 +519,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 			const auto persistentResourceSize = m_convOps[i]->GetPersistentResourceSize();
 			if (persistentResourceSize > 0)
 			{
-				m_modelConvPersistentResources[i] = RawBuffer::MakeUnique();
+				m_modelConvPersistentResources[i] = Buffer::MakeUnique();
 				N_RETURN(m_modelConvPersistentResources[i]->Create(m_device.get(), persistentResourceSize,
 					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr, 0, nullptr,
 					MemoryFlag::NONE, (L"ConvPersistent" + to_wstring(i)).c_str()), false);
@@ -530,7 +530,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 			const auto persistentResourceSize = m_addResidualOp->GetPersistentResourceSize();
 			if (persistentResourceSize > 0)
 			{
-				m_modelAddPersistentResource = RawBuffer::MakeUnique();
+				m_modelAddPersistentResource = Buffer::MakeUnique();
 				N_RETURN(m_modelAddPersistentResource->Create(m_device.get(), persistentResourceSize,
 					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr,
 					0, nullptr, MemoryFlag::NONE, L"AddPersistent"), false);
@@ -552,11 +552,11 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 	// Addition		| m_modelIntermediateResult[1], m_modelOutput | m_modelOutput
 
 	const auto bindTempResourceIfNeeded = [this](uint64_t temporaryResourceSize,
-		Binding* pBinding, RawBuffer::uptr& tempResource, const wchar_t* name)
+		Binding* pBinding, Buffer::uptr& tempResource, const wchar_t* name)
 	{
 		if (temporaryResourceSize > 0)
 		{
-			tempResource = RawBuffer::MakeUnique();
+			tempResource = Buffer::MakeUnique();
 			N_RETURN(tempResource->Create(m_device.get(), temporaryResourceSize, ResourceFlag::ALLOW_UNORDERED_ACCESS,
 				MemoryType::DEFAULT, 0, nullptr, 0, nullptr, MemoryFlag::NONE, name), false);
 			pBinding->BindTemporary(tempResource.get());
