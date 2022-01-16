@@ -810,6 +810,9 @@ namespace XUSG
 			virtual void Dispatch(XUSG::CommandList* pCommandList, const Dispatchable& dispatchable, const BindingTable& bindings) const = 0;
 
 			virtual void* GetHandle() const = 0;
+			virtual void* GetDeviceHandle() const = 0;
+
+			virtual const Device* GetDevice() const = 0;
 
 			using uptr = std::unique_ptr<CommandRecorder>;
 			using sptr = std::shared_ptr<CommandRecorder>;
