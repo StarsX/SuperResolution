@@ -10,7 +10,7 @@
 class SuperResolution
 {
 public:
-	SuperResolution(const XUSG::Device::sptr& device, const XUSG::ML::Device::sptr& mlDevice);
+	SuperResolution();
 	virtual ~SuperResolution();
 
 	bool Init(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder,
@@ -53,14 +53,11 @@ protected:
 		const char* convLayerName, const char* scaleLayerName, const char* shiftLayerName,
 		const uint32_t filterSizes[4], std::vector<XUSG::Resource::uptr>& uploaders,
 		XUSG::Buffer::uptr& filterWeightBuffer, XUSG::Buffer::uptr& biasWeightBuffer);
-	bool createWeightResource(const uint32_t tensorSizes[4], XUSG::Buffer::uptr& resourceOut);
+	bool createWeightResource(const XUSG::Device* pDevice, const uint32_t tensorSizes[4], XUSG::Buffer::uptr& resourceOut);
 	bool createPipelineLayouts();
 	bool createPipelines();
 	bool createDescriptorTables();
 	bool initResources(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder);
-	
-	XUSG::Device::sptr		m_device;
-	XUSG::ML::Device::sptr	m_mlDevice;
 
 	XUSG::ShaderPool::uptr				m_shaderPool;
 	XUSG::PipelineLayoutCache::uptr		m_pipelineLayoutCache;

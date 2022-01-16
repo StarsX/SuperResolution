@@ -78,7 +78,7 @@ void SuperResolutionX::LoadPipeline(vector<Resource::uptr>& uploaders)
 		dxgiAdapter = nullptr;
 		ThrowIfFailed(factory->EnumAdapters1(i, &dxgiAdapter));
 
-		m_device = XUSG::Device::MakeShared();
+		m_device = XUSG::Device::MakeUnique();
 		hr = m_device->Create(dxgiAdapter.get(), D3D_FEATURE_LEVEL_11_0);
 	}
 
@@ -177,7 +177,7 @@ bool SuperResolutionX::InitTensors(vector<Resource::uptr>& uploaders)
 	createDeviceFlags |= CreateDeviceFlag::DEBUG;
 #endif
 
-	m_mlDevice = ML::Device::MakeShared();
+	m_mlDevice = ML::Device::MakeUnique();
 	N_RETURN(m_mlDevice->Create(m_device.get(), createDeviceFlags), false);
 
 	DML_FEATURE_QUERY_TENSOR_DATA_TYPE_SUPPORT fp16Query = { DML_TENSOR_DATA_TYPE_FLOAT16 };
@@ -190,7 +190,7 @@ bool SuperResolutionX::InitTensors(vector<Resource::uptr>& uploaders)
 	m_mlCommandRecorder = CommandRecorder::MakeUnique();
 	N_RETURN(m_mlDevice->GetCommandRecorder(m_mlCommandRecorder.get()), false);
 
-	X_RETURN(m_superResolution, make_unique<SuperResolution>(m_device, m_mlDevice), false);
+	X_RETURN(m_superResolution, make_unique<SuperResolution>(), false);
 
 	return m_superResolution->Init(m_commandList.get(), m_mlCommandRecorder.get(),
 		m_vendorId, uploaders, m_fileName.c_str(), fp16Supported.IsSupported);
