@@ -14,8 +14,8 @@ public:
 	virtual ~SuperResolution();
 
 	bool Init(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder,
-		uint32_t vendorId, std::vector<XUSG::Resource::uptr>& uploaders, const wchar_t* fileName,
-		bool isFP16Supported = false);
+		const XUSG::DescriptorTableCache::sptr& descriptorTableCache, uint32_t vendorId,
+		std::vector<XUSG::Resource::uptr>& uploaders, const wchar_t* fileName, bool isFP16Supported = false);
 
 	void ImageToTensors(XUSG::CommandList* pCommandList);
 	void Process(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder);
@@ -32,12 +32,6 @@ protected:
 		OP_ADD,
 
 		NUM_OP
-	};
-
-	enum CbvSrvUavPoolIndex : uint8_t
-	{
-		GRAPHICS_POOL,
-		ML_POOL
 	};
 
 	struct ImageLayout
@@ -63,7 +57,7 @@ protected:
 	XUSG::PipelineLayoutCache::uptr		m_pipelineLayoutCache;
 	XUSG::Graphics::PipelineCache::uptr	m_graphicsPipelineCache;
 	XUSG::Compute::PipelineCache::uptr	m_computePipelineCache;
-	XUSG::DescriptorTableCache::uptr	m_descriptorTableCache;
+	XUSG::DescriptorTableCache::sptr	m_descriptorTableCache;
 
 	// Model layer sizes and indices
 	static const size_t	c_numUpsampleLayers = 2;

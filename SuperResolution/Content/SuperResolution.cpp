@@ -11,7 +11,7 @@ using namespace std;
 using namespace XUSG;
 using namespace XUSG::ML;
 
-#define SizeOfInUint32(obj)		DIV_UP(sizeof(obj), sizeof(uint32_t))
+#define SizeOfInUint32(obj)		XUSG_DIV_UP(sizeof(obj), sizeof(uint32_t))
 
 SuperResolution::SuperResolution() :
 	m_tensorLayout(TensorLayout::DEFAULT),
@@ -25,14 +25,14 @@ SuperResolution::~SuperResolution()
 }
 
 bool SuperResolution::Init(CommandList* pCommandList, const CommandRecorder* pCommandRecorder,
-	uint32_t vendorId, vector<Resource::uptr>& uploaders, const wchar_t* fileName,
-	bool isFP16Supported)
+	const DescriptorTableCache::sptr& descriptorTableCache, uint32_t vendorId,
+	vector<Resource::uptr>& uploaders, const wchar_t* fileName, bool isFP16Supported)
 {
 	const auto pDevice = pCommandList->GetDevice();
 	m_pipelineLayoutCache = PipelineLayoutCache::MakeUnique(pDevice);
 	m_graphicsPipelineCache = Graphics::PipelineCache::MakeUnique(pDevice);
 	m_computePipelineCache = Compute::PipelineCache::MakeUnique(pDevice);
-	m_descriptorTableCache = DescriptorTableCache::MakeUnique(pDevice);
+	m_descriptorTableCache = descriptorTableCache;
 
 	// Load input image
 	{
@@ -40,19 +40,18 @@ bool SuperResolution::Init(CommandList* pCommandList, const CommandRecorder* pCo
 		DDS::AlphaMode alphaMode;
 
 		uploaders.emplace_back(Resource::MakeUnique());
-		N_RETURN(textureLoader.CreateTextureFromFile(pCommandList, fileName,
+		XUSG_N_RETURN(textureLoader.CreateTextureFromFile(pCommandList, fileName,
 			8192, false, m_inputImage, uploaders.back().get(), &alphaMode), false);
 	}
 
 	m_imageLayoutIn.Width = static_cast<uint32_t>(m_inputImage->GetWidth());
 	m_imageLayoutIn.Height = m_inputImage->GetHeight();
 
-	N_RETURN(createResources(pCommandList, pCommandRecorder, vendorId, uploaders, isFP16Supported), false);
-	N_RETURN(initResources(pCommandList, pCommandRecorder), false);
+	XUSG_N_RETURN(createResources(pCommandList, pCommandRecorder, vendorId, uploaders, isFP16Supported), false);
+	XUSG_N_RETURN(initResources(pCommandList, pCommandRecorder), false);
 
-	N_RETURN(createPipelineLayouts(), false);
-	N_RETURN(createPipelines(), false);
-	N_RETURN(createDescriptorTables(), false);
+	XUSG_N_RETURN(createPipelineLayouts(), false);
+	XUSG_N_RETURN(createPipelines(), false);
 
 	m_imageLayoutOut.Width = m_imageLayoutIn.Width << 1;
 	m_imageLayoutOut.Height = m_imageLayoutIn.Height << 1;
@@ -63,9 +62,6 @@ bool SuperResolution::Init(CommandList* pCommandList, const CommandRecorder* pCo
 
 void SuperResolution::ImageToTensors(CommandList* pCommandList)
 {
-	const DescriptorPool descriptorPools[] = { m_descriptorTableCache->GetDescriptorPool(CBV_SRV_UAV_POOL, GRAPHICS_POOL) };
-	pCommandList->SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
-
 	ResourceBarrier barrier;
 	auto numBarriers = m_modelInput->SetBarrier(&barrier, ResourceState::UNORDERED_ACCESS);
 	pCommandList->Barrier(numBarriers, &barrier);
@@ -74,7 +70,7 @@ void SuperResolution::ImageToTensors(CommandList* pCommandList)
 	pCommandList->SetCompute32BitConstants(0, 3, &m_imageLayoutIn);
 	pCommandList->SetComputeDescriptorTable(1, m_uavSrvTable);
 	pCommandList->SetPipelineState(m_pipelines[0]);
-	pCommandList->Dispatch(DIV_UP(m_imageLayoutIn.Width, 8), DIV_UP(m_imageLayoutIn.Height, 8), 1);
+	pCommandList->Dispatch(XUSG_DIV_UP(m_imageLayoutIn.Width, 8), XUSG_DIV_UP(m_imageLayoutIn.Height, 8), 1);
 
 	numBarriers = m_modelInput->SetBarrier(&barrier, ResourceState::UNORDERED_ACCESS);
 	pCommandList->Barrier(numBarriers, &barrier);
@@ -82,9 +78,6 @@ void SuperResolution::ImageToTensors(CommandList* pCommandList)
 
 void SuperResolution::Process(CommandList* pCommandList, const CommandRecorder* pCommandRecorder)
 {
-	const DescriptorPool descriptorPools[] = { m_descriptorTableCache->GetDescriptorPool(CBV_SRV_UAV_POOL, ML_POOL) };
-	pCommandList->SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
-
 	ResourceBarrier barrier;
 	auto numBarriers = m_modelOutput->SetBarrier(&barrier, ResourceState::UNORDERED_ACCESS);
 	pCommandList->Barrier(numBarriers, &barrier);
@@ -117,9 +110,6 @@ void SuperResolution::Process(CommandList* pCommandList, const CommandRecorder* 
 
 void SuperResolution::Render(CommandList* pCommandList, RenderTarget& renderTarget)
 {
-	const DescriptorPool descriptorPools[] = { m_descriptorTableCache->GetDescriptorPool(CBV_SRV_UAV_POOL, GRAPHICS_POOL) };
-	pCommandList->SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
-
 	ResourceBarrier barriers[2];
 	auto numBarriers = renderTarget.SetBarrier(barriers, ResourceState::RENDER_TARGET);
 	numBarriers = m_modelOutput->SetBarrier(barriers, ResourceState::PIXEL_SHADER_RESOURCE, numBarriers);
@@ -193,7 +183,7 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 		const uint32_t modelInputSizes[] = { 1, 3, height, width };
 		uint32_t upscaledInputSizes[4];
 		m_upsampleOps[0] = Operator::MakeShared();
-		N_RETURN(mlUtil->CreateUpsampleLayer(pMLDevice, modelInputSizes, modelInputBufferSize,
+		XUSG_N_RETURN(mlUtil->CreateUpsampleLayer(pMLDevice, modelInputSizes, modelInputBufferSize,
 			modelOutputBufferSize, upscaledInputSizes, *m_upsampleOps[0]), false);
 
 		// Create the residual with three convolutions, an upsample, and four more convolutions
@@ -204,9 +194,9 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 		uint32_t filterSizes[] = { 32, 3, 5, 5 };
 		uint32_t intermediateInputSizes[2][4];
 		m_convOps[0] = Operator::MakeShared();
-		N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, modelInputSizes, filterSizes, true, modelInputBufferSize,
+		XUSG_N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, modelInputSizes, filterSizes, true, modelInputBufferSize,
 			intermediateBufferMaxSize[0], intermediateInputSizes[0], *m_convOps[0]), false);
-		N_RETURN(createWeightTensors(pCommandList, weights, "conv1/weights", "conv1/BatchNorm/scale",
+		XUSG_N_RETURN(createWeightTensors(pCommandList, weights, "conv1/weights", "conv1/BatchNorm/scale",
 			"conv1/BatchNorm/shift", filterSizes, uploaders, m_modelConvFilterWeights[0],
 			m_modelConvBiasWeights[0]), false);
 
@@ -219,26 +209,26 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 		filterSizes[2] = 3;		// filter height
 		filterSizes[3] = 3;		// filter width
 		m_convOps[1] = Operator::MakeShared();
-		N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
+		XUSG_N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
 			true, intermediateBufferMaxSize[inputIndex], intermediateBufferMaxSize[1 - inputIndex],
 			intermediateInputSizes[1 - inputIndex], *m_convOps[1]), false);
-		N_RETURN(createWeightTensors(pCommandList, weights, "conv2/weights", "conv2/BatchNorm/scale",
+		XUSG_N_RETURN(createWeightTensors(pCommandList, weights, "conv2/weights", "conv2/BatchNorm/scale",
 			"conv2/BatchNorm/shift", filterSizes, uploaders, m_modelConvFilterWeights[1],
 			m_modelConvBiasWeights[1]), false);
 		inputIndex = 1 - inputIndex;
 
 		filterSizes[1] = 64;
 		m_convOps[2] = Operator::MakeShared();
-		N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
+		XUSG_N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
 			true, intermediateBufferMaxSize[inputIndex], intermediateBufferMaxSize[1 - inputIndex],
 			intermediateInputSizes[1 - inputIndex], *m_convOps[2]), false);
-		N_RETURN(createWeightTensors(pCommandList, weights, "conv3/weights", "conv3/BatchNorm/scale",
+		XUSG_N_RETURN(createWeightTensors(pCommandList, weights, "conv3/weights", "conv3/BatchNorm/scale",
 			"conv3/BatchNorm/shift", filterSizes, uploaders, m_modelConvFilterWeights[2],
 			m_modelConvBiasWeights[2]), false);
 		inputIndex = 1 - inputIndex;
 
 		m_upsampleOps[1] = Operator::MakeShared();
-		N_RETURN(mlUtil->CreateUpsampleLayer(pMLDevice, intermediateInputSizes[inputIndex], intermediateBufferMaxSize[inputIndex],
+		XUSG_N_RETURN(mlUtil->CreateUpsampleLayer(pMLDevice, intermediateInputSizes[inputIndex], intermediateBufferMaxSize[inputIndex],
 			intermediateBufferMaxSize[1 - inputIndex], intermediateInputSizes[1 - inputIndex], *m_upsampleOps[1]), false);
 		inputIndex = 1 - inputIndex;
 
@@ -246,10 +236,10 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 		filterSizes[2] = 5;
 		filterSizes[3] = 5;
 		m_convOps[3] = Operator::MakeShared();
-		N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
+		XUSG_N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
 			true, intermediateBufferMaxSize[inputIndex], intermediateBufferMaxSize[1 - inputIndex],
 			intermediateInputSizes[1 - inputIndex], *m_convOps[3]), false);
-		N_RETURN(createWeightTensors(pCommandList, weights, "conv_up1/conv/weights",
+		XUSG_N_RETURN(createWeightTensors(pCommandList, weights, "conv_up1/conv/weights",
 			"conv_up1/conv/BatchNorm/scale", "conv_up1/conv/BatchNorm/shift", filterSizes,
 			uploaders, m_modelConvFilterWeights[3], m_modelConvBiasWeights[3]), false);
 		inputIndex = 1 - inputIndex;
@@ -258,29 +248,29 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 		filterSizes[2] = 3;
 		filterSizes[3] = 3;
 		m_convOps[4] = Operator::MakeShared();
-		N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
+		XUSG_N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
 			true, intermediateBufferMaxSize[inputIndex], intermediateBufferMaxSize[1 - inputIndex],
 			intermediateInputSizes[1 - inputIndex], *m_convOps[4]), false);
-		N_RETURN(createWeightTensors(pCommandList, weights, "conv4/weights", "conv4/BatchNorm/scale",
+		XUSG_N_RETURN(createWeightTensors(pCommandList, weights, "conv4/weights", "conv4/BatchNorm/scale",
 			"conv4/BatchNorm/shift", filterSizes, uploaders, m_modelConvFilterWeights[4],
 			m_modelConvBiasWeights[4]), false);
 		inputIndex = 1 - inputIndex;
 
 		m_convOps[5] = Operator::MakeShared();
-		N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
+		XUSG_N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
 			true, intermediateBufferMaxSize[inputIndex], intermediateBufferMaxSize[1 - inputIndex],
 			intermediateInputSizes[1 - inputIndex], *m_convOps[5]), false);
-		N_RETURN(createWeightTensors(pCommandList, weights, "conv5/weights", "conv5/BatchNorm/scale",
+		XUSG_N_RETURN(createWeightTensors(pCommandList, weights, "conv5/weights", "conv5/BatchNorm/scale",
 			"conv5/BatchNorm/shift", filterSizes, uploaders, m_modelConvFilterWeights[5],
 			m_modelConvBiasWeights[5]), false);
 		inputIndex = 1 - inputIndex;
 
 		filterSizes[0] = 3;
 		m_convOps[6] = Operator::MakeShared();
-		N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
+		XUSG_N_RETURN(mlUtil->CreateConvolutionLayer(pMLDevice, intermediateInputSizes[inputIndex], filterSizes,
 			false, intermediateBufferMaxSize[inputIndex], intermediateBufferMaxSize[1 - inputIndex],
 			intermediateInputSizes[1 - inputIndex], *m_convOps[6]), false);
-		N_RETURN(createWeightTensors(pCommandList, weights, "conv6/weights", nullptr, nullptr,
+		XUSG_N_RETURN(createWeightTensors(pCommandList, weights, "conv6/weights", nullptr, nullptr,
 			filterSizes, uploaders, m_modelConvFilterWeights[6], m_modelConvBiasWeights[6]), false);
 		inputIndex = 1 - inputIndex;
 
@@ -288,7 +278,7 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 		assert(memcmp(upscaledInputSizes, intermediateInputSizes[inputIndex], 4 * dataStride) == 0);
 
 		m_addResidualOp = Operator::MakeShared();
-		N_RETURN(mlUtil->CreateAdditionLayer(pMLDevice, upscaledInputSizes, *m_addResidualOp), false);
+		XUSG_N_RETURN(mlUtil->CreateAdditionLayer(pMLDevice, upscaledInputSizes, *m_addResidualOp), false);
 	}
 
 	// Buffers for ML inputs and outputs
@@ -296,14 +286,14 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 		// Resource for input tensor
 		auto numElements = static_cast<uint32_t>(modelInputBufferSize / dataStride);
 		m_modelInput = TypedBuffer::MakeUnique();
-		N_RETURN(m_modelInput->Create(pDevice, numElements, dataStride, format,
+		XUSG_N_RETURN(m_modelInput->Create(pDevice, numElements, dataStride, format,
 			ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0,
 			nullptr, 1, nullptr, MemoryFlag::NONE, L"InputBuffer"), false);
 
 		// Model result tensor is 2x larger in both dimensions
 		numElements = static_cast<uint32_t>(modelOutputBufferSize / dataStride);
 		m_modelOutput = TypedBuffer::MakeUnique();
-		N_RETURN(m_modelOutput->Create(pDevice, numElements, dataStride, format,
+		XUSG_N_RETURN(m_modelOutput->Create(pDevice, numElements, dataStride, format,
 			ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 1,
 			nullptr, 0, nullptr, MemoryFlag::NONE, L"OutputBuffer"), false);
 
@@ -312,7 +302,7 @@ bool SuperResolution::createResources(CommandList* pCommandList, const CommandRe
 		for (uint8_t i = 0; i < 2; ++i)
 		{
 			m_modelIntermediateResult[i] = Buffer::MakeUnique();
-			N_RETURN(m_modelIntermediateResult[i]->Create(pDevice, intermediateBufferMaxSize[i],
+			XUSG_N_RETURN(m_modelIntermediateResult[i]->Create(pDevice, intermediateBufferMaxSize[i],
 				ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr, 0, nullptr,
 				MemoryFlag::NONE, (L"IntermediateResultBuffer" + to_wstring(i)).c_str()), false);
 		}
@@ -342,16 +332,16 @@ bool SuperResolution::createWeightTensors(CommandList* pCommandList, WeightMapTy
 	}
 
 	uploaders.emplace_back(Resource::MakeUnique());
-	N_RETURN(createWeightResource(pDevice, filterSizes, filterWeightBuffer), false);
-	N_RETURN(filterWeightBuffer->Upload(pCommandList, uploaders.back().get(), filterWeights.data(),
+	XUSG_N_RETURN(createWeightResource(pDevice, filterSizes, filterWeightBuffer), false);
+	XUSG_N_RETURN(filterWeightBuffer->Upload(pCommandList, uploaders.back().get(), filterWeights.data(),
 		filterWeights.size(), 0, ResourceState::UNORDERED_ACCESS), false);
 
 	if (useScaleShift)
 	{
 		const uint32_t biasSizes[] = { 1, filterSizes[0], 1, 1 };	// One bias per output channel
 		uploaders.emplace_back(Resource::MakeUnique());
-		N_RETURN(createWeightResource(pDevice, biasSizes, biasWeightBuffer), false);
-		N_RETURN(biasWeightBuffer->Upload(pCommandList, uploaders.back().get(), biasWeights.data(),
+		XUSG_N_RETURN(createWeightResource(pDevice, biasSizes, biasWeightBuffer), false);
+		XUSG_N_RETURN(biasWeightBuffer->Upload(pCommandList, uploaders.back().get(), biasWeights.data(),
 			biasWeights.size(), 0, ResourceState::UNORDERED_ACCESS), false);
 
 		// The scale weights will be premultiplied into the filter weights, so they don't need
@@ -385,7 +375,7 @@ bool SuperResolution::createPipelineLayouts()
 			DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE | DescriptorFlag::DESCRIPTORS_VOLATILE);
 		pipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0,
 			0, DescriptorFlag::DATA_STATIC);
-		X_RETURN(m_pipelineLayouts[0], pipelineLayout->GetPipelineLayout(m_pipelineLayoutCache.get(),
+		XUSG_X_RETURN(m_pipelineLayouts[0], pipelineLayout->GetPipelineLayout(m_pipelineLayoutCache.get(),
 			PipelineLayoutFlag::DENY_VERTEX_SHADER_ROOT_ACCESS |
 			PipelineLayoutFlag::DENY_HULL_SHADER_ROOT_ACCESS |
 			PipelineLayoutFlag::DENY_DOMAIN_SHADER_ROOT_ACCESS |
@@ -400,7 +390,7 @@ bool SuperResolution::createPipelineLayouts()
 		pipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0, 0, DescriptorFlag::DESCRIPTORS_VOLATILE);
 		pipelineLayout->SetShaderStage(0, Shader::Stage::PS);
 		pipelineLayout->SetShaderStage(1, Shader::Stage::PS);
-		X_RETURN(m_pipelineLayouts[1], pipelineLayout->GetPipelineLayout(m_pipelineLayoutCache.get(),
+		XUSG_X_RETURN(m_pipelineLayouts[1], pipelineLayout->GetPipelineLayout(m_pipelineLayoutCache.get(),
 			PipelineLayoutFlag::DENY_VERTEX_SHADER_ROOT_ACCESS |
 			PipelineLayoutFlag::DENY_HULL_SHADER_ROOT_ACCESS |
 			PipelineLayoutFlag::DENY_DOMAIN_SHADER_ROOT_ACCESS |
@@ -415,19 +405,19 @@ bool SuperResolution::createPipelines()
 {
 	{
 		const auto cs = m_shaderPool->CreateShader(Shader::Stage::CS, 0, L"CSImageToTensor.cso");
-		N_RETURN(cs, false);
+		XUSG_N_RETURN(cs, false);
 
 		const auto state = Compute::State::MakeUnique();
 		state->SetPipelineLayout(m_pipelineLayouts[0]);
 		state->SetShader(cs);
-		X_RETURN(m_pipelines[0], state->GetPipeline(m_computePipelineCache.get(), L"ImageToTensor"), false);
+		XUSG_X_RETURN(m_pipelines[0], state->GetPipeline(m_computePipelineCache.get(), L"ImageToTensor"), false);
 	}
 
 	{
 		const auto vs = m_shaderPool->CreateShader(Shader::Stage::VS, 0, L"VSTensorToImage.cso");
 		const auto ps = m_shaderPool->CreateShader(Shader::Stage::PS, 0, L"PSTensorToImage.cso");
-		N_RETURN(vs, false);
-		N_RETURN(ps, false);
+		XUSG_N_RETURN(vs, false);
+		XUSG_N_RETURN(ps, false);
 
 		const auto state = Graphics::State::MakeUnique();
 		state->SetPipelineLayout(m_pipelineLayouts[1]);
@@ -437,7 +427,7 @@ bool SuperResolution::createPipelines()
 		state->IASetPrimitiveTopologyType(PrimitiveTopologyType::TRIANGLE);
 		state->OMSetNumRenderTargets(1);
 		state->OMSetRTVFormat(0, Format::R8G8B8A8_UNORM);
-		X_RETURN(m_pipelines[1], state->GetPipeline(m_graphicsPipelineCache.get(), L"TensorToImage"), false);
+		XUSG_X_RETURN(m_pipelines[1], state->GetPipeline(m_graphicsPipelineCache.get(), L"TensorToImage"), false);
 	}
 
 	return true;
@@ -452,14 +442,14 @@ bool SuperResolution::createDescriptorTables()
 			m_inputImage->GetSRV()
 		};
 		const auto descriptorTable = XUSG::Util::DescriptorTable::MakeUnique();
-		descriptorTable->SetDescriptors(0, static_cast<uint32_t>(size(descriptors)), descriptors, GRAPHICS_POOL);
-		X_RETURN(m_uavSrvTable, descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		descriptorTable->SetDescriptors(0, static_cast<uint32_t>(size(descriptors)), descriptors);
+		XUSG_X_RETURN(m_uavSrvTable, descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 
 	{
 		const auto descriptorTable = XUSG::Util::DescriptorTable::MakeUnique();
-		descriptorTable->SetDescriptors(0, 1, &m_modelOutput->GetSRV(), GRAPHICS_POOL);
-		X_RETURN(m_srvTable, descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		descriptorTable->SetDescriptors(0, 1, &m_modelOutput->GetSRV());
+		XUSG_X_RETURN(m_srvTable, descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
 	}
 
 	return true;
@@ -485,28 +475,28 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		// at different times, so we reuse the same descriptor slots. GetDescriptorCount() ensures there are enough
 		// slots for both cases.
 		opInitializers[OP_UP_SAMPLE] = OperatorInitializer::MakeUnique();
-		N_RETURN(opInitializers[OP_UP_SAMPLE]->Create(pMLDevice, m_upsampleOps, c_numUpsampleLayers), false);
+		XUSG_N_RETURN(opInitializers[OP_UP_SAMPLE]->Create(pMLDevice, m_upsampleOps, c_numUpsampleLayers), false);
 		upsampleOpDescriptorCount = opInitializers[OP_UP_SAMPLE]->GetDescriptorCount();
 		
 		opInitializers[OP_CONV] = OperatorInitializer::MakeUnique();
-		N_RETURN(opInitializers[OP_CONV]->Create(pMLDevice, m_convOps, c_numConvLayers), false);
+		XUSG_N_RETURN(opInitializers[OP_CONV]->Create(pMLDevice, m_convOps, c_numConvLayers), false);
 		convOpDescriptorCount = opInitializers[OP_CONV]->GetDescriptorCount();
 
 		opInitializers[OP_ADD] = OperatorInitializer::MakeUnique();
-		N_RETURN(opInitializers[OP_ADD]->Create(pMLDevice, &m_addResidualOp, 1), false);
+		XUSG_N_RETURN(opInitializers[OP_ADD]->Create(pMLDevice, &m_addResidualOp, 1), false);
 		additionOpDescriptorCount = opInitializers[OP_ADD]->GetDescriptorCount();
 
-		upsampleDescriptorsIdx = 0;
+		upsampleDescriptorsIdx = 3;
 		convDescriptorsIdx = upsampleDescriptorsIdx + upsampleOpDescriptorCount * c_numUpsampleLayers;
 		additionDescriptorsIdx = convDescriptorsIdx + convOpDescriptorCount * c_numConvLayers;
 		const auto descriptorCount = additionDescriptorsIdx + additionOpDescriptorCount;
 
-		N_RETURN(m_descriptorTableCache->AllocateDescriptorPool(CBV_SRV_UAV_POOL, descriptorCount, ML_POOL), false);
-		descriptorPool = m_descriptorTableCache->GetDescriptorPool(CBV_SRV_UAV_POOL, ML_POOL);
+		XUSG_N_RETURN(m_descriptorTableCache->AllocateDescriptorPool(CBV_SRV_UAV_POOL, descriptorCount), false);
+		XUSG_N_RETURN(createDescriptorTables(), false);
+		descriptorPool = m_descriptorTableCache->GetDescriptorPool(CBV_SRV_UAV_POOL);
 
 		// Operator initialization dispatches will use this heap right away
-		const DescriptorPool descriptorPools[] = { descriptorPool };
-		pCommandList->SetDescriptorPools(static_cast<uint32_t>(size(descriptorPools)), descriptorPools);
+		pCommandList->SetDescriptorPools(1, &descriptorPool);
 	}
 
 	// Create any persistent resources required for the operators.
@@ -517,7 +507,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 			if (persistentResourceSize > 0)
 			{
 				m_modelUpsamplePersistentResources[i] = Buffer::MakeUnique();
-				N_RETURN(m_modelUpsamplePersistentResources[i]->Create(pDevice, persistentResourceSize,
+				XUSG_N_RETURN(m_modelUpsamplePersistentResources[i]->Create(pDevice, persistentResourceSize,
 					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr, 0, nullptr,
 					MemoryFlag::NONE, (L"UpSamplePersistent" + to_wstring(i)).c_str()), false);
 			}
@@ -529,7 +519,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 			if (persistentResourceSize > 0)
 			{
 				m_modelConvPersistentResources[i] = Buffer::MakeUnique();
-				N_RETURN(m_modelConvPersistentResources[i]->Create(pDevice, persistentResourceSize,
+				XUSG_N_RETURN(m_modelConvPersistentResources[i]->Create(pDevice, persistentResourceSize,
 					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr, 0, nullptr,
 					MemoryFlag::NONE, (L"ConvPersistent" + to_wstring(i)).c_str()), false);
 			}
@@ -540,7 +530,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 			if (persistentResourceSize > 0)
 			{
 				m_modelAddPersistentResource = Buffer::MakeUnique();
-				N_RETURN(m_modelAddPersistentResource->Create(pDevice, persistentResourceSize,
+				XUSG_N_RETURN(m_modelAddPersistentResource->Create(pDevice, persistentResourceSize,
 					ResourceFlag::ALLOW_UNORDERED_ACCESS, MemoryType::DEFAULT, 0, nullptr,
 					0, nullptr, MemoryFlag::NONE, L"AddPersistent"), false);
 			}	
@@ -566,7 +556,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		if (temporaryResourceSize > 0)
 		{
 			tempResource = Buffer::MakeUnique();
-			N_RETURN(tempResource->Create(pDevice, temporaryResourceSize, ResourceFlag::ALLOW_UNORDERED_ACCESS,
+			XUSG_N_RETURN(tempResource->Create(pDevice, temporaryResourceSize, ResourceFlag::ALLOW_UNORDERED_ACCESS,
 				MemoryType::DEFAULT, 0, nullptr, 0, nullptr, MemoryFlag::NONE, name), false);
 			pBinding->BindTemporary(tempResource.get());
 		}
@@ -581,7 +571,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		// Bind resources for initialization.
 		// The ML API guarantees that initialization never uses a persistent resource.
 		assert(opInitializers[OP_UP_SAMPLE]->GetPersistentResourceSize() == 0);
-		N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_UP_SAMPLE], descriptorPool,
+		XUSG_N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_UP_SAMPLE], descriptorPool,
 			opInitializers[OP_UP_SAMPLE]->GetDescriptorCount(), upsampleDescriptorsIdx), false);
 
 		// If the operator requires a persistent resource, it must be bound as output for the initializer.
@@ -591,7 +581,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 				initBindingTable->AppendOutput(m_modelUpsamplePersistentResources[i].get());
 			else initBindingTable->AppendOutput(nullptr);
 		initBindingTable->GetDispatchableBindingTable();
-		N_RETURN(bindTempResourceIfNeeded(opInitializers[OP_UP_SAMPLE]->AsOperator()->GetTemporaryResourceSize(),
+		XUSG_N_RETURN(bindTempResourceIfNeeded(opInitializers[OP_UP_SAMPLE]->AsOperator()->GetTemporaryResourceSize(),
 			initBindingTable.get(), m_modelInitTemporaryResources[OP_UP_SAMPLE], L"UpSampleInitTemporary"), false);
 
 		// Run initialization
@@ -602,7 +592,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		{
 			const auto descriptorOffset = upsampleDescriptorsIdx + i * upsampleOpDescriptorCount;
 			m_upsampleBindings[i] = Binding::MakeUnique();
-			N_RETURN(m_upsampleBindings[i]->Create(pMLDevice, *m_upsampleOps[i], descriptorPool,
+			XUSG_N_RETURN(m_upsampleBindings[i]->Create(pMLDevice, *m_upsampleOps[i], descriptorPool,
 				m_upsampleOps[i]->GetDescriptorCount(), descriptorOffset), false);
 
 			const auto pInputResource = (i == 0) ? m_modelInput.get() : m_modelIntermediateResult[0].get();
@@ -611,7 +601,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 			m_upsampleBindings[i]->AppendInput(pInputResource);
 			m_upsampleBindings[i]->AppendOutput(pOutputResource);
 			m_upsampleBindings[i]->GetDispatchableBindingTable();
-			N_RETURN(bindTempResourceIfNeeded(m_upsampleOps[i]->GetTemporaryResourceSize(), m_upsampleBindings[i].get(),
+			XUSG_N_RETURN(bindTempResourceIfNeeded(m_upsampleOps[i]->GetTemporaryResourceSize(), m_upsampleBindings[i].get(),
 				m_modelUpsampleTemporaryResources[i], (L"UpSampleTemporary" + to_wstring(i)).c_str()), false);
 
 			if (m_modelUpsamplePersistentResources[i])
@@ -625,7 +615,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 
 		// Bind resources for initialization
 		assert(opInitializers[OP_CONV]->GetPersistentResourceSize() == 0);
-		N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_CONV], descriptorPool,
+		XUSG_N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_CONV], descriptorPool,
 			opInitializers[OP_CONV]->GetDescriptorCount(), convDescriptorsIdx), false);
 
 #if ML_MANAGED_WEIGHTS
@@ -648,7 +638,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 				initBindingTable->AppendOutput(m_modelConvPersistentResources[i].get());
 			else initBindingTable->AppendOutput(nullptr);
 		initBindingTable->GetDispatchableBindingTable();
-		N_RETURN(bindTempResourceIfNeeded(opInitializers[OP_CONV]->AsOperator()->GetTemporaryResourceSize(),
+		XUSG_N_RETURN(bindTempResourceIfNeeded(opInitializers[OP_CONV]->AsOperator()->GetTemporaryResourceSize(),
 			initBindingTable.get(), m_modelInitTemporaryResources[OP_CONV], L"ConvInitTemporary"), false);
 
 		// Run initialization
@@ -659,7 +649,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		{
 			const auto descriptorOffset = convDescriptorsIdx + i * convOpDescriptorCount;
 			m_convBindings[i] = Binding::MakeUnique();
-			N_RETURN(m_convBindings[i]->Create(pMLDevice, *m_convOps[i], descriptorPool,
+			XUSG_N_RETURN(m_convBindings[i]->Create(pMLDevice, *m_convOps[i], descriptorPool,
 				m_convOps[i]->GetDescriptorCount(), descriptorOffset), false);
 
 			// See table at the beginning of the function for the mapping of ops to resources.
@@ -679,7 +669,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 #endif
 			m_convBindings[i]->AppendOutput(pOutputResource);
 			m_convBindings[i]->GetDispatchableBindingTable();
-			N_RETURN(bindTempResourceIfNeeded(m_convOps[i]->GetTemporaryResourceSize(), m_convBindings[i].get(),
+			XUSG_N_RETURN(bindTempResourceIfNeeded(m_convOps[i]->GetTemporaryResourceSize(), m_convBindings[i].get(),
 				m_modelConvTemporaryResources[i], (L"ConvTemporary" + to_wstring(i)).c_str()), false);
 
 			if (m_modelConvPersistentResources[i])
@@ -693,13 +683,13 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 
 		// Bind resources for initialization.
 		assert(opInitializers[OP_ADD]->GetPersistentResourceSize() == 0);
-		N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_ADD], descriptorPool,
+		XUSG_N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_ADD], descriptorPool,
 			opInitializers[OP_ADD]->GetDescriptorCount(), additionDescriptorsIdx), false);
 
 		// If the operator requires a persistent resource, it must be bound as output for the initializer.
 		if (m_modelAddPersistentResource)
 			initBindingTable->AppendOutput(m_modelAddPersistentResource.get());
-		N_RETURN(bindTempResourceIfNeeded(opInitializers[OP_ADD]->AsOperator()->GetTemporaryResourceSize(),
+		XUSG_N_RETURN(bindTempResourceIfNeeded(opInitializers[OP_ADD]->AsOperator()->GetTemporaryResourceSize(),
 			initBindingTable.get(), m_modelInitTemporaryResources[OP_ADD], L"AddInitTemporary"), false);
 
 		// Run initialization
@@ -708,7 +698,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		// Bind resources for execution
 		{
 			m_addResidualBinding = Binding::MakeUnique();
-			N_RETURN(m_addResidualBinding->Create(pMLDevice, *m_addResidualOp, descriptorPool,
+			XUSG_N_RETURN(m_addResidualBinding->Create(pMLDevice, *m_addResidualOp, descriptorPool,
 				m_addResidualOp->GetDescriptorCount(), additionDescriptorsIdx), false);
 
 			// m_modelOutput will already hold the result of the first upsample operation. We add the result of
@@ -716,7 +706,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 			m_addResidualBinding->AppendInput(m_modelIntermediateResult[1].get());
 			m_addResidualBinding->AppendInput(m_modelOutput.get());
 			m_addResidualBinding->AppendOutput(m_modelOutput.get());
-			N_RETURN(bindTempResourceIfNeeded(m_addResidualOp->GetTemporaryResourceSize(), m_addResidualBinding.get(),
+			XUSG_N_RETURN(bindTempResourceIfNeeded(m_addResidualOp->GetTemporaryResourceSize(), m_addResidualBinding.get(),
 				m_modelAddTemporaryResource, L"AddTemporary"), false);
 
 			if (m_modelAddPersistentResource)

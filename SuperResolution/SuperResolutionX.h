@@ -41,6 +41,8 @@ public:
 private:
 	static const uint8_t FrameCount = 3;
 
+	XUSG::DescriptorTableCache::sptr m_descriptorTableCache;
+
 	XUSG::SwapChain::uptr			m_swapChain;
 	XUSG::CommandAllocator::uptr	m_commandAllocators[FrameCount];
 	XUSG::CommandQueue::uptr		m_commandQueue;
