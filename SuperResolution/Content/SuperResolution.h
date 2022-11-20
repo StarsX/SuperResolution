@@ -14,7 +14,7 @@ public:
 	virtual ~SuperResolution();
 
 	bool Init(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder,
-		const XUSG::DescriptorTableCache::sptr& descriptorTableCache, uint32_t vendorId,
+		const XUSG::DescriptorTableLib::sptr& descriptorTableLib, uint32_t vendorId,
 		std::vector<XUSG::Resource::uptr>& uploaders, const wchar_t* fileName, bool isFP16Supported = false);
 
 	void ImageToTensors(XUSG::CommandList* pCommandList);
@@ -53,11 +53,11 @@ protected:
 	bool createDescriptorTables();
 	bool initResources(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder);
 
-	XUSG::ShaderPool::uptr				m_shaderPool;
-	XUSG::PipelineLayoutCache::uptr		m_pipelineLayoutCache;
-	XUSG::Graphics::PipelineCache::uptr	m_graphicsPipelineCache;
-	XUSG::Compute::PipelineCache::uptr	m_computePipelineCache;
-	XUSG::DescriptorTableCache::sptr	m_descriptorTableCache;
+	XUSG::ShaderLib::uptr				m_shaderLib;
+	XUSG::PipelineLayoutLib::uptr		m_pipelineLayoutLib;
+	XUSG::Graphics::PipelineLib::uptr	m_graphicsPipelineLib;
+	XUSG::Compute::PipelineLib::uptr	m_computePipelineLib;
+	XUSG::DescriptorTableLib::sptr		m_descriptorTableLib;
 
 	// Model layer sizes and indices
 	static const size_t	c_numUpsampleLayers = 2;

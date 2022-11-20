@@ -11,13 +11,11 @@ using namespace std;
 using namespace XUSG;
 using namespace XUSG::ML;
 
-#define SizeOfInUint32(obj)		XUSG_DIV_UP(sizeof(obj), sizeof(uint32_t))
-
 SuperResolution::SuperResolution() :
 	m_tensorLayout(TensorLayout::DEFAULT),
 	m_tensorDataType(TensorDataType::FLOAT32)
 {
-	m_shaderPool = ShaderPool::MakeUnique();
+	m_shaderLib = ShaderLib::MakeUnique();
 }
 
 SuperResolution::~SuperResolution()
@@ -25,14 +23,14 @@ SuperResolution::~SuperResolution()
 }
 
 bool SuperResolution::Init(CommandList* pCommandList, const CommandRecorder* pCommandRecorder,
-	const DescriptorTableCache::sptr& descriptorTableCache, uint32_t vendorId,
+	const DescriptorTableLib::sptr& descriptorTableLib, uint32_t vendorId,
 	vector<Resource::uptr>& uploaders, const wchar_t* fileName, bool isFP16Supported)
 {
 	const auto pDevice = pCommandList->GetDevice();
-	m_pipelineLayoutCache = PipelineLayoutCache::MakeUnique(pDevice);
-	m_graphicsPipelineCache = Graphics::PipelineCache::MakeUnique(pDevice);
-	m_computePipelineCache = Compute::PipelineCache::MakeUnique(pDevice);
-	m_descriptorTableCache = descriptorTableCache;
+	m_pipelineLayoutLib = PipelineLayoutLib::MakeUnique(pDevice);
+	m_graphicsPipelineLib = Graphics::PipelineLib::MakeUnique(pDevice);
+	m_computePipelineLib = Compute::PipelineLib::MakeUnique(pDevice);
+	m_descriptorTableLib = descriptorTableLib;
 
 	// Load input image
 	{
@@ -117,7 +115,7 @@ void SuperResolution::Render(CommandList* pCommandList, RenderTarget& renderTarg
 
 	// Set pipeline
 	pCommandList->SetGraphicsPipelineLayout(m_pipelineLayouts[1]);
-	pCommandList->SetGraphics32BitConstants(0, SizeOfInUint32(m_imageLayoutOut), &m_imageLayoutOut);
+	pCommandList->SetGraphics32BitConstants(0, XUSG_UINT32_SIZE_OF(m_imageLayoutOut), &m_imageLayoutOut);
 	pCommandList->SetGraphicsDescriptorTable(1, m_srvTable);
 	pCommandList->SetPipelineState(m_pipelines[1]);
 
@@ -370,12 +368,12 @@ bool SuperResolution::createPipelineLayouts()
 {
 	{
 		const auto pipelineLayout = XUSG::Util::PipelineLayout::MakeUnique();
-		pipelineLayout->SetRange(0, DescriptorType::CONSTANT, SizeOfInUint32(ImageLayout), 0);
+		pipelineLayout->SetRange(0, DescriptorType::CONSTANT, XUSG_UINT32_SIZE_OF(ImageLayout), 0);
 		pipelineLayout->SetRange(1, DescriptorType::UAV, 1, 0, 0,
 			DescriptorFlag::DATA_STATIC_WHILE_SET_AT_EXECUTE | DescriptorFlag::DESCRIPTORS_VOLATILE);
 		pipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0,
 			0, DescriptorFlag::DATA_STATIC);
-		XUSG_X_RETURN(m_pipelineLayouts[0], pipelineLayout->GetPipelineLayout(m_pipelineLayoutCache.get(),
+		XUSG_X_RETURN(m_pipelineLayouts[0], pipelineLayout->GetPipelineLayout(m_pipelineLayoutLib.get(),
 			PipelineLayoutFlag::DENY_VERTEX_SHADER_ROOT_ACCESS |
 			PipelineLayoutFlag::DENY_HULL_SHADER_ROOT_ACCESS |
 			PipelineLayoutFlag::DENY_DOMAIN_SHADER_ROOT_ACCESS |
@@ -386,11 +384,11 @@ bool SuperResolution::createPipelineLayouts()
 
 	{
 		const auto pipelineLayout = XUSG::Util::PipelineLayout::MakeUnique();
-		pipelineLayout->SetRange(0, DescriptorType::CONSTANT, SizeOfInUint32(ImageLayout), 0);
+		pipelineLayout->SetRange(0, DescriptorType::CONSTANT, XUSG_UINT32_SIZE_OF(ImageLayout), 0);
 		pipelineLayout->SetRange(1, DescriptorType::SRV, 1, 0, 0, DescriptorFlag::DESCRIPTORS_VOLATILE);
 		pipelineLayout->SetShaderStage(0, Shader::Stage::PS);
 		pipelineLayout->SetShaderStage(1, Shader::Stage::PS);
-		XUSG_X_RETURN(m_pipelineLayouts[1], pipelineLayout->GetPipelineLayout(m_pipelineLayoutCache.get(),
+		XUSG_X_RETURN(m_pipelineLayouts[1], pipelineLayout->GetPipelineLayout(m_pipelineLayoutLib.get(),
 			PipelineLayoutFlag::DENY_VERTEX_SHADER_ROOT_ACCESS |
 			PipelineLayoutFlag::DENY_HULL_SHADER_ROOT_ACCESS |
 			PipelineLayoutFlag::DENY_DOMAIN_SHADER_ROOT_ACCESS |
@@ -404,18 +402,18 @@ bool SuperResolution::createPipelineLayouts()
 bool SuperResolution::createPipelines()
 {
 	{
-		const auto cs = m_shaderPool->CreateShader(Shader::Stage::CS, 0, L"CSImageToTensor.cso");
+		const auto cs = m_shaderLib->CreateShader(Shader::Stage::CS, 0, L"CSImageToTensor.cso");
 		XUSG_N_RETURN(cs, false);
 
 		const auto state = Compute::State::MakeUnique();
 		state->SetPipelineLayout(m_pipelineLayouts[0]);
 		state->SetShader(cs);
-		XUSG_X_RETURN(m_pipelines[0], state->GetPipeline(m_computePipelineCache.get(), L"ImageToTensor"), false);
+		XUSG_X_RETURN(m_pipelines[0], state->GetPipeline(m_computePipelineLib.get(), L"ImageToTensor"), false);
 	}
 
 	{
-		const auto vs = m_shaderPool->CreateShader(Shader::Stage::VS, 0, L"VSTensorToImage.cso");
-		const auto ps = m_shaderPool->CreateShader(Shader::Stage::PS, 0, L"PSTensorToImage.cso");
+		const auto vs = m_shaderLib->CreateShader(Shader::Stage::VS, 0, L"VSTensorToImage.cso");
+		const auto ps = m_shaderLib->CreateShader(Shader::Stage::PS, 0, L"PSTensorToImage.cso");
 		XUSG_N_RETURN(vs, false);
 		XUSG_N_RETURN(ps, false);
 
@@ -423,11 +421,11 @@ bool SuperResolution::createPipelines()
 		state->SetPipelineLayout(m_pipelineLayouts[1]);
 		state->SetShader(Shader::Stage::VS, vs);
 		state->SetShader(Shader::Stage::PS, ps);
-		state->DSSetState(Graphics::DEPTH_STENCIL_NONE, m_graphicsPipelineCache.get());
+		state->DSSetState(Graphics::DEPTH_STENCIL_NONE, m_graphicsPipelineLib.get());
 		state->IASetPrimitiveTopologyType(PrimitiveTopologyType::TRIANGLE);
 		state->OMSetNumRenderTargets(1);
 		state->OMSetRTVFormat(0, Format::R8G8B8A8_UNORM);
-		XUSG_X_RETURN(m_pipelines[1], state->GetPipeline(m_graphicsPipelineCache.get(), L"TensorToImage"), false);
+		XUSG_X_RETURN(m_pipelines[1], state->GetPipeline(m_graphicsPipelineLib.get(), L"TensorToImage"), false);
 	}
 
 	return true;
@@ -443,13 +441,13 @@ bool SuperResolution::createDescriptorTables()
 		};
 		const auto descriptorTable = XUSG::Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, static_cast<uint32_t>(size(descriptors)), descriptors);
-		XUSG_X_RETURN(m_uavSrvTable, descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_uavSrvTable, descriptorTable->GetCbvSrvUavTable(m_descriptorTableLib.get()), false);
 	}
 
 	{
 		const auto descriptorTable = XUSG::Util::DescriptorTable::MakeUnique();
 		descriptorTable->SetDescriptors(0, 1, &m_modelOutput->GetSRV());
-		XUSG_X_RETURN(m_srvTable, descriptorTable->GetCbvSrvUavTable(m_descriptorTableCache.get()), false);
+		XUSG_X_RETURN(m_srvTable, descriptorTable->GetCbvSrvUavTable(m_descriptorTableLib.get()), false);
 	}
 
 	return true;
@@ -491,9 +489,9 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		additionDescriptorsIdx = convDescriptorsIdx + convOpDescriptorCount * c_numConvLayers;
 		const auto descriptorCount = additionDescriptorsIdx + additionOpDescriptorCount;
 
-		XUSG_N_RETURN(m_descriptorTableCache->AllocateDescriptorPool(CBV_SRV_UAV_POOL, descriptorCount), false);
+		XUSG_N_RETURN(m_descriptorTableLib->AllocateDescriptorPool(CBV_SRV_UAV_POOL, descriptorCount), false);
 		XUSG_N_RETURN(createDescriptorTables(), false);
-		descriptorPool = m_descriptorTableCache->GetDescriptorPool(CBV_SRV_UAV_POOL);
+		descriptorPool = m_descriptorTableLib->GetDescriptorPool(CBV_SRV_UAV_POOL);
 
 		// Operator initialization dispatches will use this heap right away
 		pCommandList->SetDescriptorPools(1, &descriptorPool);

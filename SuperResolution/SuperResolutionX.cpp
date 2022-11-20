@@ -110,8 +110,8 @@ void SuperResolutionX::LoadPipeline(vector<Resource::uptr>& uploaders)
 	XUSG_N_RETURN(pCommandList->Create(m_device.get(), 0, CommandListType::DIRECT,
 		m_commandAllocators[m_frameIndex].get(), nullptr), ThrowIfFailed(E_FAIL));
 
-	// Create descriptor table cache.
-	m_descriptorTableCache = DescriptorTableCache::MakeShared(m_device.get(), L"DescriptorTableCache");
+	// Create descriptor-table lib.
+	m_descriptorTableLib = DescriptorTableLib::MakeShared(m_device.get(), L"DescriptorTableLib");
 
 	XUSG_N_RETURN(InitTensors(uploaders), ThrowIfFailed(E_FAIL));
 	m_width = m_superResolution->GetOutWidth();
@@ -196,7 +196,7 @@ bool SuperResolutionX::InitTensors(vector<Resource::uptr>& uploaders)
 	XUSG_X_RETURN(m_superResolution, make_unique<SuperResolution>(), false);
 
 	return m_superResolution->Init(m_commandList.get(), m_mlCommandRecorder.get(),
-		m_descriptorTableCache, m_vendorId, uploaders, m_fileName.c_str(),
+		m_descriptorTableLib, m_vendorId, uploaders, m_fileName.c_str(),
 		fp16Supported.IsSupported);
 }
 
@@ -281,7 +281,7 @@ void SuperResolutionX::PopulateCommandList()
 	const auto pCommandList = m_commandList.get();
 	XUSG_N_RETURN(pCommandList->Reset(pCommandAllocator, nullptr), ThrowIfFailed(E_FAIL));
 
-	const auto descriptorPool = m_descriptorTableCache->GetDescriptorPool(CBV_SRV_UAV_POOL);
+	const auto descriptorPool = m_descriptorTableLib->GetDescriptorPool(CBV_SRV_UAV_POOL);
 	pCommandList->SetDescriptorPools(1, &descriptorPool);
 
 	static auto isFirstFrame = true;

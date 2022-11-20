@@ -41,15 +41,15 @@ public:
 private:
 	static const uint8_t FrameCount = 3;
 
-	XUSG::DescriptorTableCache::sptr m_descriptorTableCache;
+	XUSG::DescriptorTableLib::sptr	m_descriptorTableLib;
 
 	XUSG::SwapChain::uptr			m_swapChain;
 	XUSG::CommandAllocator::uptr	m_commandAllocators[FrameCount];
 	XUSG::CommandQueue::uptr		m_commandQueue;
 
-	XUSG::Device::uptr			m_device;
-	XUSG::RenderTarget::uptr	m_renderTargets[FrameCount];
-	XUSG::CommandList::uptr		m_commandList;
+	XUSG::Device::uptr				m_device;
+	XUSG::RenderTarget::uptr		m_renderTargets[FrameCount];
+	XUSG::CommandList::uptr			m_commandList;
 
 	// DML
 	std::unique_ptr<SuperResolution> m_superResolution;
