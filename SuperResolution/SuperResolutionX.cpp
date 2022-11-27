@@ -281,8 +281,8 @@ void SuperResolutionX::PopulateCommandList()
 	const auto pCommandList = m_commandList.get();
 	XUSG_N_RETURN(pCommandList->Reset(pCommandAllocator, nullptr), ThrowIfFailed(E_FAIL));
 
-	const auto descriptorPool = m_descriptorTableLib->GetDescriptorPool(CBV_SRV_UAV_POOL);
-	pCommandList->SetDescriptorPools(1, &descriptorPool);
+	const auto descriptorHeap = m_descriptorTableLib->GetDescriptorHeap(CBV_SRV_UAV_HEAP);
+	pCommandList->SetDescriptorHeaps(1, &descriptorHeap);
 
 	static auto isFirstFrame = true;
 	if (isFirstFrame || m_updateImage)

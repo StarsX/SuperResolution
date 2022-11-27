@@ -467,7 +467,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 	uint32_t upsampleDescriptorsIdx, convDescriptorsIdx, additionDescriptorsIdx;
 
 	OperatorInitializer::uptr opInitializers[NUM_OP];
-	DescriptorPool descriptorPool;
+	DescriptorHeap descriptorHeap;
 	{
 		// The same descriptor heap will be used for both initializing and executing operators. These each happen
 		// at different times, so we reuse the same descriptor slots. GetDescriptorCount() ensures there are enough
@@ -489,12 +489,12 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		additionDescriptorsIdx = convDescriptorsIdx + convOpDescriptorCount * c_numConvLayers;
 		const auto descriptorCount = additionDescriptorsIdx + additionOpDescriptorCount;
 
-		XUSG_N_RETURN(m_descriptorTableLib->AllocateDescriptorPool(CBV_SRV_UAV_POOL, descriptorCount), false);
+		XUSG_N_RETURN(m_descriptorTableLib->AllocateDescriptorHeap(CBV_SRV_UAV_HEAP, descriptorCount), false);
 		XUSG_N_RETURN(createDescriptorTables(), false);
-		descriptorPool = m_descriptorTableLib->GetDescriptorPool(CBV_SRV_UAV_POOL);
+		descriptorHeap = m_descriptorTableLib->GetDescriptorHeap(CBV_SRV_UAV_HEAP);
 
 		// Operator initialization dispatches will use this heap right away
-		pCommandList->SetDescriptorPools(1, &descriptorPool);
+		pCommandList->SetDescriptorHeaps(1, &descriptorHeap);
 	}
 
 	// Create any persistent resources required for the operators.
@@ -569,7 +569,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		// Bind resources for initialization.
 		// The ML API guarantees that initialization never uses a persistent resource.
 		assert(opInitializers[OP_UP_SAMPLE]->GetPersistentResourceSize() == 0);
-		XUSG_N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_UP_SAMPLE], descriptorPool,
+		XUSG_N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_UP_SAMPLE], descriptorHeap,
 			opInitializers[OP_UP_SAMPLE]->GetDescriptorCount(), upsampleDescriptorsIdx), false);
 
 		// If the operator requires a persistent resource, it must be bound as output for the initializer.
@@ -590,7 +590,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		{
 			const auto descriptorOffset = upsampleDescriptorsIdx + i * upsampleOpDescriptorCount;
 			m_upsampleBindings[i] = Binding::MakeUnique();
-			XUSG_N_RETURN(m_upsampleBindings[i]->Create(pMLDevice, *m_upsampleOps[i], descriptorPool,
+			XUSG_N_RETURN(m_upsampleBindings[i]->Create(pMLDevice, *m_upsampleOps[i], descriptorHeap,
 				m_upsampleOps[i]->GetDescriptorCount(), descriptorOffset), false);
 
 			const auto pInputResource = (i == 0) ? m_modelInput.get() : m_modelIntermediateResult[0].get();
@@ -613,7 +613,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 
 		// Bind resources for initialization
 		assert(opInitializers[OP_CONV]->GetPersistentResourceSize() == 0);
-		XUSG_N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_CONV], descriptorPool,
+		XUSG_N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_CONV], descriptorHeap,
 			opInitializers[OP_CONV]->GetDescriptorCount(), convDescriptorsIdx), false);
 
 #if ML_MANAGED_WEIGHTS
@@ -647,7 +647,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		{
 			const auto descriptorOffset = convDescriptorsIdx + i * convOpDescriptorCount;
 			m_convBindings[i] = Binding::MakeUnique();
-			XUSG_N_RETURN(m_convBindings[i]->Create(pMLDevice, *m_convOps[i], descriptorPool,
+			XUSG_N_RETURN(m_convBindings[i]->Create(pMLDevice, *m_convOps[i], descriptorHeap,
 				m_convOps[i]->GetDescriptorCount(), descriptorOffset), false);
 
 			// See table at the beginning of the function for the mapping of ops to resources.
@@ -681,7 +681,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 
 		// Bind resources for initialization.
 		assert(opInitializers[OP_ADD]->GetPersistentResourceSize() == 0);
-		XUSG_N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_ADD], descriptorPool,
+		XUSG_N_RETURN(initBindingTable->Create(pMLDevice, *opInitializers[OP_ADD], descriptorHeap,
 			opInitializers[OP_ADD]->GetDescriptorCount(), additionDescriptorsIdx), false);
 
 		// If the operator requires a persistent resource, it must be bound as output for the initializer.
@@ -696,7 +696,7 @@ bool SuperResolution::initResources(CommandList* pCommandList,// const CommandAl
 		// Bind resources for execution
 		{
 			m_addResidualBinding = Binding::MakeUnique();
-			XUSG_N_RETURN(m_addResidualBinding->Create(pMLDevice, *m_addResidualOp, descriptorPool,
+			XUSG_N_RETURN(m_addResidualBinding->Create(pMLDevice, *m_addResidualOp, descriptorHeap,
 				m_addResidualOp->GetDescriptorCount(), additionDescriptorsIdx), false);
 
 			// m_modelOutput will already hold the result of the first upsample operation. We add the result of
