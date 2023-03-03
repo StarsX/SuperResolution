@@ -259,10 +259,10 @@ void SuperResolutionX::ParseCommandLineArgs(wchar_t* argv[], int argc)
 
 	for (auto i = 1; i < argc; ++i)
 	{
-		if (_wcsnicmp(argv[i], L"-image", wcslen(argv[i])) == 0 ||
-			_wcsnicmp(argv[i], L"/image", wcslen(argv[i])) == 0)
+		if (wcsncmp(argv[i], L"-image", wcslen(argv[i])) == 0 ||
+			wcsncmp(argv[i], L"/image", wcslen(argv[i])) == 0)
 		{
-			if (i + 1 < argc) m_fileName = argv[i + 1];
+			if (i + 1 < argc) m_fileName = argv[++i];
 		}
 	}
 }
