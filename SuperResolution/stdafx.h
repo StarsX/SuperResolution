@@ -23,7 +23,7 @@
 
 #include <windows.h>
 
-#include "d3dx12.h"
+#include "d3d12.h"
 #include <dxgi1_5.h>
 #include <DirectML.h>					// The DirectML header from the Windows SDK.
 #include <D3Dcompiler.h>

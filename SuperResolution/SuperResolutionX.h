@@ -58,6 +58,10 @@ private:
 
 	uint32_t	m_vendorId;
 
+	// Screen-shot helper
+	XUSG::Buffer::uptr	m_readBuffer;
+	uint32_t			m_rowPitch;
+
 	// Synchronization objects.
 	uint32_t	m_frameIndex;
 	HANDLE		m_fenceEvent;
@@ -73,6 +77,9 @@ private:
 	// User external settings
 	std::wstring m_fileName;
 
+	// Screen-shot state
+	uint8_t m_screenShot;
+
 	void LoadPipeline(std::vector<XUSG::Resource::uptr>& uploaders);
 	void LoadAssets();
 	bool InitTensors(std::vector<XUSG::Resource::uptr>& uploaders);
@@ -80,5 +87,7 @@ private:
 	void PopulateCommandList();
 	void WaitForGpu();
 	void MoveToNextFrame();
+	void SaveImage(char const* fileName, XUSG::Buffer* imageBuffer,
+		uint32_t w, uint32_t h, uint32_t rowPitch, uint8_t comp = 3);
 	double CalculateFrameStats(float* fTimeStep = nullptr);
 };

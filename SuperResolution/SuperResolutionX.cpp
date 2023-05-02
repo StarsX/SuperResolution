@@ -10,6 +10,7 @@
 //*********************************************************
 
 #include "SuperResolutionX.h"
+#include "stb_image_write.h"
 
 using namespace std;
 using namespace XUSG;
@@ -247,6 +248,9 @@ void SuperResolutionX::OnKeyUp(uint8_t key)
 	case VK_F1:
 		m_showFPS = !m_showFPS;
 		break;
+	case VK_F11:
+		m_screenShot = 1;
+		break;
 	case 'U':
 		m_updateImage = !m_updateImage;
 		break;
@@ -292,11 +296,20 @@ void SuperResolutionX::PopulateCommandList()
 		isFirstFrame = false;
 	}
 
-	m_superResolution->Render(pCommandList, *m_renderTargets[m_frameIndex]);
+	const auto pRenderTarget = m_renderTargets[m_frameIndex].get();
+	m_superResolution->Render(pCommandList, pRenderTarget);
 
 	ResourceBarrier barrier;
-	const auto numBarriers = m_renderTargets[m_frameIndex]->SetBarrier(&barrier, ResourceState::PRESENT);
+	const auto numBarriers = pRenderTarget->SetBarrier(&barrier, ResourceState::PRESENT);
 	pCommandList->Barrier(numBarriers, &barrier);
+
+	// Screen-shot helper
+	if (m_screenShot == 1)
+	{
+		if (!m_readBuffer) m_readBuffer = Buffer::MakeUnique();
+		pRenderTarget->ReadBack(pCommandList, m_readBuffer.get(), &m_rowPitch);
+		m_screenShot = 2;
+	}
 
 	XUSG_N_RETURN(pCommandList->Close(), ThrowIfFailed(E_FAIL));
 }
@@ -334,6 +347,43 @@ void SuperResolutionX::MoveToNextFrame()
 
 	// Set the fence value for the next frame.
 	m_fenceValues[m_frameIndex] = currentFenceValue + 1;
+
+	// Screen-shot helper
+	if (m_screenShot)
+	{
+		if (m_screenShot > FrameCount)
+		{
+			char timeStr[15];
+			tm dateTime;
+			const auto now = time(nullptr);
+			if (!localtime_s(&dateTime, &now) && strftime(timeStr, sizeof(timeStr), "%Y%m%d%H%M%S", &dateTime))
+				SaveImage((string("SuperResolutionX_") + timeStr + ".png").c_str(), m_readBuffer.get(), m_width, m_height, m_rowPitch);
+			m_screenShot = 0;
+		}
+		else ++m_screenShot;
+	}
+}
+
+void SuperResolutionX::SaveImage(char const* fileName, Buffer* imageBuffer, uint32_t w, uint32_t h, uint32_t rowPitch, uint8_t comp)
+{
+	assert(comp == 3 || comp == 4);
+	const auto pData = static_cast<uint8_t*>(imageBuffer->Map(nullptr));
+
+	//stbi_write_png_compression_level = 1024;
+	vector<uint8_t> imageData(comp * w * h);
+	const auto sw = rowPitch / 4;
+	for (auto i = 0u; i < h; ++i)
+		for (auto j = 0u; j < w; ++j)
+		{
+			const auto s = sw * i + j;
+			const auto d = w * i + j;
+			for (uint8_t k = 0; k < comp; ++k)
+				imageData[comp * d + k] = pData[4 * s + k];
+		}
+
+	stbi_write_png(fileName, w, h, comp, imageData.data(), 0);
+
+	m_readBuffer->Unmap();
 }
 
 double SuperResolutionX::CalculateFrameStats(float* pTimeStep)
@@ -358,6 +408,9 @@ double SuperResolutionX::CalculateFrameStats(float* pTimeStep)
 		windowText << L"    fps: ";
 		if (m_showFPS) windowText << setprecision(2) << fixed << fps;
 		else windowText << L"[F1]";
+
+		windowText << L"    [F11] screen shot";
+
 		SetCustomWindowText(windowText.str().c_str());
 	}
 

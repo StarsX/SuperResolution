@@ -19,7 +19,7 @@ public:
 
 	void ImageToTensors(XUSG::CommandList* pCommandList);
 	void Process(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder);
-	void Render(XUSG::CommandList* pCommandList, XUSG::RenderTarget& renderTarget);
+	void Render(XUSG::CommandList* pCommandList, XUSG::RenderTarget* pRenderTarget);
 
 	uint32_t GetOutWidth() const;
 	uint32_t GetOutHeight() const;

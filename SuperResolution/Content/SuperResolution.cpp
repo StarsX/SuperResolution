@@ -106,10 +106,10 @@ void SuperResolution::Process(CommandList* pCommandList, const CommandRecorder* 
 	pCommandRecorder->Dispatch(pCommandList, m_addResidualOp->GetDispatchable(), m_addResidualBinding->GetDispatchableBindingTable());
 }
 
-void SuperResolution::Render(CommandList* pCommandList, RenderTarget& renderTarget)
+void SuperResolution::Render(CommandList* pCommandList, RenderTarget* pRenderTarget)
 {
 	ResourceBarrier barriers[2];
-	auto numBarriers = renderTarget.SetBarrier(barriers, ResourceState::RENDER_TARGET);
+	auto numBarriers = pRenderTarget->SetBarrier(barriers, ResourceState::RENDER_TARGET);
 	numBarriers = m_modelOutput->SetBarrier(barriers, ResourceState::PIXEL_SHADER_RESOURCE, numBarriers);
 	pCommandList->Barrier(numBarriers, barriers);
 
@@ -127,7 +127,7 @@ void SuperResolution::Render(CommandList* pCommandList, RenderTarget& renderTarg
 	pCommandList->RSSetViewports(1, &viewport);
 	pCommandList->RSSetScissorRects(1, &scissorRect);
 
-	pCommandList->OMSetRenderTargets(1, &renderTarget.GetRTV());
+	pCommandList->OMSetRenderTargets(1, &pRenderTarget->GetRTV());
 
 	pCommandList->IASetPrimitiveTopology(PrimitiveTopology::TRIANGLELIST);
 	pCommandList->Draw(3, 1, 0, 0);
