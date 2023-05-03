@@ -58,10 +58,6 @@ private:
 
 	uint32_t	m_vendorId;
 
-	// Screen-shot helper
-	XUSG::Buffer::uptr	m_readBuffer;
-	uint32_t			m_rowPitch;
-
 	// Synchronization objects.
 	uint32_t	m_frameIndex;
 	HANDLE		m_fenceEvent;
@@ -77,8 +73,10 @@ private:
 	// User external settings
 	std::wstring m_fileName;
 
-	// Screen-shot state
-	uint8_t m_screenShot;
+	// Screen-shot helpers and state
+	XUSG::Buffer::uptr	m_readBuffer;
+	uint32_t			m_rowPitch;
+	uint8_t				m_screenShot;
 
 	void LoadPipeline(std::vector<XUSG::Resource::uptr>& uploaders);
 	void LoadAssets();
