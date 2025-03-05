@@ -94,6 +94,7 @@ COPY /Y "$(ProjectDir)XUSG\Bin\$(Platform)\$(Configuration)\*.dll" "$(ProjectDir
     <ClInclude Include="Common\DXFrameworkHelper.h" />
     <ClInclude Include="Common\dxgiformat.h" />
     <ClInclude Include="Common\Float16Compressor.h" />
+    <ClInclude Include="Common\stb_image.h" />
     <ClInclude Include="Common\stb_image_write.h" />
     <ClInclude Include="Common\StepTimer.h" />
     <ClInclude Include="Common\Win32Application.h" />
@@ -101,7 +102,6 @@ COPY /Y "$(ProjectDir)XUSG\Bin\$(Platform)\$(Configuration)\*.dll" "$(ProjectDir
     <ClInclude Include="Content\SuperResolution.h" />
     <ClInclude Include="SuperResolutionX.h" />
     <ClInclude Include="stdafx.h" />
-    <ClInclude Include="XUSG\Advanced\XUSGDDSLoader.h" />
     <ClInclude Include="XUSG\Core\XUSG.h" />
     <ClInclude Include="XUSG\MachineLearning\XUSGMachineLearning.h" />
   </ItemGroup>

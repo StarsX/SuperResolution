@@ -15,7 +15,7 @@ public:
 
 	bool Init(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder,
 		const XUSG::DescriptorTableLib::sptr& descriptorTableLib, uint32_t vendorId,
-		std::vector<XUSG::Resource::uptr>& uploaders, const wchar_t* fileName, bool isFP16Supported = false);
+		std::vector<XUSG::Resource::uptr>& uploaders, const char* fileName, bool isFP16Supported = false);
 
 	void ImageToTensors(XUSG::CommandList* pCommandList);
 	void Process(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder);
@@ -41,6 +41,8 @@ protected:
 		bool UseNhwc;
 	};
 
+	bool loadImage(XUSG::CommandList* pCommandList, const char* fileName,
+		XUSG::Texture* pTexture, XUSG::Resource* pUploader, const wchar_t* name);
 	bool createResources(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder,
 		uint32_t vendorId, std::vector<XUSG::Resource::uptr>& uploaders, bool isFP16Supported);
 	bool createWeightTensors(XUSG::CommandList* pCommandList, XUSG::ML::WeightMapType& weights,
@@ -65,7 +67,7 @@ protected:
 	static const size_t	c_numIntermediateBuffers = 2;
 
 	// Resources
-	XUSG::Texture::sptr		m_inputImage;
+	XUSG::Texture::uptr		m_inputImage;
 	XUSG::TypedBuffer::uptr	m_modelInput;
 	XUSG::TypedBuffer::uptr	m_modelOutput;
 

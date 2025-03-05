@@ -3,9 +3,8 @@
 //--------------------------------------------------------------------------------------
 
 #include "SuperResolution.h"
-#define _INDEPENDENT_DDS_LOADER_
-#include "Advanced/XUSGDDSLoader.h"
-#undef _INDEPENDENT_DDS_LOADER_
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
 
 using namespace std;
 using namespace XUSG;
@@ -24,7 +23,7 @@ SuperResolution::~SuperResolution()
 
 bool SuperResolution::Init(CommandList* pCommandList, const CommandRecorder* pCommandRecorder,
 	const DescriptorTableLib::sptr& descriptorTableLib, uint32_t vendorId,
-	vector<Resource::uptr>& uploaders, const wchar_t* fileName, bool isFP16Supported)
+	vector<Resource::uptr>& uploaders, const char* fileName, bool isFP16Supported)
 {
 	const auto pDevice = pCommandList->GetDevice();
 	m_pipelineLayoutLib = PipelineLayoutLib::MakeUnique(pDevice);
@@ -33,14 +32,10 @@ bool SuperResolution::Init(CommandList* pCommandList, const CommandRecorder* pCo
 	m_descriptorTableLib = descriptorTableLib;
 
 	// Load input image
-	{
-		DDS::Loader textureLoader;
-		DDS::AlphaMode alphaMode;
-
-		uploaders.emplace_back(Resource::MakeUnique());
-		XUSG_N_RETURN(textureLoader.CreateTextureFromFile(pCommandList, fileName,
-			8192, false, m_inputImage, uploaders.back().get(), &alphaMode), false);
-	}
+	m_inputImage = Texture::MakeUnique();
+	uploaders.emplace_back(Resource::MakeUnique());
+	XUSG_N_RETURN(loadImage(pCommandList, fileName, m_inputImage.get(),
+		uploaders.back().get(), L"InputImage"), false);
 
 	m_imageLayoutIn.Width = static_cast<uint32_t>(m_inputImage->GetWidth());
 	m_imageLayoutIn.Height = m_inputImage->GetHeight();
@@ -141,6 +136,42 @@ uint32_t SuperResolution::GetOutWidth() const
 uint32_t SuperResolution::GetOutHeight() const
 {
 	return m_imageLayoutOut.Height;
+}
+
+bool SuperResolution::loadImage(CommandList* pCommandList, const char* fileName,
+	Texture* pTexture, Resource* pUploader, const wchar_t* name)
+{
+	int width, height, channels;
+	const auto infoStat = stbi_info(fileName, &width, &height, &channels);
+	assert(infoStat);
+	const auto reqChannels = channels != 3 ? channels : 4;
+
+	Format format;
+	switch (reqChannels)
+	{
+	case 1:
+		format = Format::R8_UNORM;
+		break;
+	case 2:
+		format = Format::R8G8_UNORM;
+		break;
+	case 4:
+		format = Format::R8G8B8A8_UNORM;
+		break;
+	default:
+		assert(!"Wrong channels, unknown format!");
+	}
+
+	XUSG_N_RETURN(pTexture->Create(pCommandList->GetDevice(), width, height, format, 1,
+		ResourceFlag::NONE, 1, 1, false, MemoryFlag::NONE, name), false);
+
+	const auto pTexData = stbi_load(fileName, &width, &height, &channels, reqChannels);
+
+	XUSG_N_RETURN(pTexture->Upload(pCommandList, pUploader, pTexData, reqChannels,
+		ResourceState::ALL_SHADER_RESOURCE | ResourceState::COPY_SOURCE), false);
+	STBI_FREE(pTexData);
+
+	return true;
 }
 
 bool SuperResolution::createResources(CommandList* pCommandList, const CommandRecorder* pCommandRecorder,

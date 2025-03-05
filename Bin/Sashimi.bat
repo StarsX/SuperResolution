@@ -1,1 +1,1 @@
-start SuperResolution.exe -image Assets/Sashimi.dds
+start SuperResolution.exe -i Assets/Sashimi.png

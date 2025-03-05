@@ -1,1 +1,1 @@
-start SuperResolution.exe -image Assets/Xiaoyao.dds
+start SuperResolution.exe -i Assets/Xiaoyao.png

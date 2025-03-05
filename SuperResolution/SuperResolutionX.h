@@ -79,7 +79,7 @@ private:
 	bool		m_pausing;
 
 	// User external settings
-	std::wstring m_fileName;
+	std::string m_fileName;
 
 	// Screen-shot helpers and state
 	XUSG::Buffer::uptr	m_readBuffer;
