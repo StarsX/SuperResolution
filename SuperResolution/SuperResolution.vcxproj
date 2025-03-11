@@ -102,11 +102,16 @@ COPY /Y "$(ProjectDir)XUSG\Bin\$(Platform)\$(Configuration)\*.dll" "$(ProjectDir
     <ClInclude Include="Content\SuperResolution.h" />
     <ClInclude Include="SuperResolutionX.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="XUSG\Advanced\XUSGTextureLoader.h" />
     <ClInclude Include="XUSG\Core\XUSG.h" />
     <ClInclude Include="XUSG\MachineLearning\XUSGMachineLearning.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Common\DXFramework.cpp">
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdafx.h</ForcedIncludeFiles>
+      <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stdafx.h</ForcedIncludeFiles>
+    </ClCompile>
+    <ClCompile Include="Common\stb_image.cpp">
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">stdafx.h</ForcedIncludeFiles>
       <ForcedIncludeFiles Condition="'$(Configuration)|$(Platform)'=='Release|x64'">stdafx.h</ForcedIncludeFiles>
     </ClCompile>

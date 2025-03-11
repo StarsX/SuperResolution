@@ -3,8 +3,9 @@
 //--------------------------------------------------------------------------------------
 
 #include "SuperResolution.h"
-#define STB_IMAGE_IMPLEMENTATION
-#include "stb_image.h"
+
+#define _ENABLE_STB_IMAGE_LOADER_ONLY_
+#include "Advanced/XUSGTextureLoader.h"
 
 using namespace std;
 using namespace XUSG;
@@ -34,8 +35,8 @@ bool SuperResolution::Init(CommandList* pCommandList, const CommandRecorder* pCo
 	// Load input image
 	m_inputImage = Texture::MakeUnique();
 	uploaders.emplace_back(Resource::MakeUnique());
-	XUSG_N_RETURN(loadImage(pCommandList, fileName, m_inputImage.get(),
-		uploaders.back().get(), L"InputImage"), false);
+	XUSG_N_RETURN(CreateTextureFromFile(pCommandList, fileName, m_inputImage.get(),
+		uploaders.back().get(), ResourceState::COMMON, MemoryFlag::NONE, L"Source"), false);
 
 	m_imageLayoutIn.Width = static_cast<uint32_t>(m_inputImage->GetWidth());
 	m_imageLayoutIn.Height = m_inputImage->GetHeight();
@@ -136,42 +137,6 @@ uint32_t SuperResolution::GetOutWidth() const
 uint32_t SuperResolution::GetOutHeight() const
 {
 	return m_imageLayoutOut.Height;
-}
-
-bool SuperResolution::loadImage(CommandList* pCommandList, const char* fileName,
-	Texture* pTexture, Resource* pUploader, const wchar_t* name)
-{
-	int width, height, channels;
-	const auto infoStat = stbi_info(fileName, &width, &height, &channels);
-	assert(infoStat);
-	const auto reqChannels = channels != 3 ? channels : 4;
-
-	Format format;
-	switch (reqChannels)
-	{
-	case 1:
-		format = Format::R8_UNORM;
-		break;
-	case 2:
-		format = Format::R8G8_UNORM;
-		break;
-	case 4:
-		format = Format::R8G8B8A8_UNORM;
-		break;
-	default:
-		assert(!"Wrong channels, unknown format!");
-	}
-
-	XUSG_N_RETURN(pTexture->Create(pCommandList->GetDevice(), width, height, format, 1,
-		ResourceFlag::NONE, 1, 1, false, MemoryFlag::NONE, name), false);
-
-	const auto pTexData = stbi_load(fileName, &width, &height, &channels, reqChannels);
-
-	XUSG_N_RETURN(pTexture->Upload(pCommandList, pUploader, pTexData, reqChannels,
-		ResourceState::ALL_SHADER_RESOURCE | ResourceState::COPY_SOURCE), false);
-	STBI_FREE(pTexData);
-
-	return true;
 }
 
 bool SuperResolution::createResources(CommandList* pCommandList, const CommandRecorder* pCommandRecorder,

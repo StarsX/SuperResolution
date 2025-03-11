@@ -41,8 +41,6 @@ protected:
 		bool UseNhwc;
 	};
 
-	bool loadImage(XUSG::CommandList* pCommandList, const char* fileName,
-		XUSG::Texture* pTexture, XUSG::Resource* pUploader, const wchar_t* name);
 	bool createResources(XUSG::CommandList* pCommandList, const XUSG::ML::CommandRecorder* pCommandRecorder,
 		uint32_t vendorId, std::vector<XUSG::Resource::uptr>& uploaders, bool isFP16Supported);
 	bool createWeightTensors(XUSG::CommandList* pCommandList, XUSG::ML::WeightMapType& weights,
